@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Express Service — Taller de Precisión</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@300;400;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #080808;
+      --s1:      #111111;
+      --s2:      #1a1a1a;
+      --s3:      #222222;
+      --red:     #d63020;
+      --red-dim: rgba(214,48,32,.14);
+      --t1:      #ffffff;
+      --t2:      #aaaaaa;
+      --t3:      #555555;
+      --border:  rgba(255,255,255,.07);
+      --fh:      'Barlow Condensed', sans-serif;
+      --fb:      'Inter', sans-serif;
+      --ease:    cubic-bezier(.16,1,.3,1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--t1); font-family: var(--fb); overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+
+    /* ── NAV ───────────────────────────────────── */
+    nav {
+      position: fixed; inset: 0 0 auto; z-index: 900;
+      padding: 28px 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background .4s, padding .4s, border-color .4s;
+      border-bottom: 1px solid transparent;
+    }
+    nav.scrolled {
+      background: rgba(8,8,8,.96); backdrop-filter: blur(16px);
+      padding: 18px 64px; border-bottom-color: var(--border);
+    }
+    .logo { font-family: var(--fh); font-size: 1.35rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--t1); text-decoration: none; }
+    .logo em { color: var(--red); font-style: normal; }
+    .nav-links { display: flex; gap: 44px; list-style: none; }
+    .nav-links a { font-size: .68rem; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; color: var(--t2); text-decoration: none; transition: color .2s; }
+    .nav-links a:hover { color: var(--t1); }
+    .nav-btn { font-size: .7rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--t1); background: var(--red); padding: 13px 30px; text-decoration: none; transition: opacity .2s, transform .2s; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: none; }
+    .nav-btn:hover { opacity: .85; transform: translateY(-1px); }
+
+    /* ── HERO ──────────────────────────────────── */
+    #hero { position: relative; height: 100vh; min-height: 680px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+    .hero-bg { position: absolute; inset: 0; z-index: 0; }
+    #hero-img { width: 100%; height: 100%; object-fit: cover; transform-origin: center; transform: scale(1.08); will-change: transform; }
+    .hero-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to bottom, rgba(8,8,8,.25) 0%, rgba(8,8,8,.5) 45%, rgba(8,8,8,.88) 80%, rgba(8,8,8,1) 100%),
+                  linear-gradient(to right, rgba(8,8,8,.4) 0%, transparent 60%);
+    }
+    .hero-topbar { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--red); z-index: 10; }
+    .hero-body { position: relative; z-index: 5; text-align: center; padding: 0 24px; display: flex; flex-direction: column; align-items: center; }
+    .hero-eyebrow { font-size: .65rem; font-weight: 500; letter-spacing: .38em; text-transform: uppercase; color: var(--red); margin-bottom: 28px; opacity: 0; transform: translateY(16px); animation: fadeUp .7s .25s var(--ease) forwards; }
+    .hero-h1 { font-family: var(--fh); font-size: clamp(5.5rem, 14vw, 13rem); font-weight: 900; line-height: .88; letter-spacing: -.02em; text-transform: uppercase; margin-bottom: 36px; }
+    .hero-h1 .l1 { display: block; opacity: 0; transform: translateX(-90px); animation: slideInRight .95s .45s var(--ease) forwards; }
+    .hero-h1 .l2 { display: block; color: var(--red); opacity: 0; transform: translateX(90px); animation: slideInLeft .95s .6s var(--ease) forwards; }
+    .hero-sub { font-size: clamp(.85rem, 1.4vw, 1rem); font-weight: 300; color: var(--t2); letter-spacing: .04em; line-height: 1.7; max-width: 460px; margin-bottom: 52px; opacity: 0; transform: translateY(16px); animation: fadeUp .7s .85s var(--ease) forwards; }
+    .hero-actions { display: flex; gap: 14px; align-items: center; opacity: 0; transform: translateY(16px); animation: fadeUp .7s 1.05s var(--ease) forwards; }
+    .btn-red { font-size: .72rem; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--t1); background: var(--red); padding: 16px 42px; text-decoration: none; transition: opacity .2s, transform .2s; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; border: none; font-family: var(--fb); }
+    .btn-red:hover { opacity: .85; transform: translateY(-2px); }
+    .btn-outline { font-size: .72rem; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--t2); background: transparent; border: 1px solid var(--border); padding: 16px 42px; text-decoration: none; transition: color .2s, border-color .2s; cursor: pointer; font-family: var(--fb); }
+    .btn-outline:hover { color: var(--t1); border-color: rgba(255,255,255,.3); }
+    .hero-strip { position: absolute; bottom: 0; left: 0; right: 0; z-index: 5; display: flex; justify-content: center; opacity: 0; transform: translateY(8px); animation: fadeUp .7s 1.3s var(--ease) forwards; }
+    .strip-item { padding: 22px 56px; border-top: 1px solid var(--border); border-right: 1px solid var(--border); text-align: center; background: rgba(8,8,8,.6); backdrop-filter: blur(8px); }
+    .strip-item:first-child { border-left: 1px solid var(--border); }
+    .strip-val { font-family: var(--fh); font-size: 2.2rem; font-weight: 800; line-height: 1; }
+    .strip-val em { color: var(--red); font-style: normal; }
+    .strip-lbl { font-size: .6rem; font-weight: 500; letter-spacing: .22em; text-transform: uppercase; color: var(--t3); margin-top: 6px; }
+    .scroll-cue { position: absolute; bottom: 108px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; animation: fadeUp .7s 1.6s var(--ease) forwards; }
+    .scroll-cue span { font-size: .58rem; font-weight: 500; letter-spacing: .32em; text-transform: uppercase; color: var(--t3); }
+    .scroll-line { width: 1px; height: 56px; background: var(--t3); position: relative; overflow: hidden; }
+    .scroll-line::after { content: ''; position: absolute; top: -100%; left: 0; width: 100%; height: 100%; background: var(--red); animation: runDown 1.6s ease infinite; }
+
+    /* ── SECCIONES COMPARTIDAS ─────────────────── */
+    .sec { padding: 128px 64px; }
+    .sec-label { font-size: .62rem; font-weight: 500; letter-spacing: .38em; text-transform: uppercase; color: var(--red); margin-bottom: 18px; }
+    .sec-title { font-family: var(--fh); font-size: clamp(2.4rem, 4.5vw, 4.2rem); font-weight: 800; line-height: .96; letter-spacing: -.01em; text-transform: uppercase; }
+
+    /* ── SERVICIOS ─────────────────────────────── */
+    #servicios { background: var(--bg); }
+    .svc-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 72px; gap: 32px; }
+    .svc-header-right { font-size: .88rem; color: var(--t2); line-height: 1.75; max-width: 360px; flex-shrink: 0; }
+    .svc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
+    .svc-card { background: var(--s1); padding: 48px 32px 40px; position: relative; overflow: hidden; transition: background .3s; }
+    .svc-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--red); transform: scaleX(0); transform-origin: left; transition: transform .5s var(--ease); }
+    .svc-card:hover::after { transform: scaleX(1); }
+    .svc-card:hover { background: var(--s2); }
+    .svc-num { font-family: var(--fh); font-size: 4.5rem; font-weight: 900; color: rgba(255,255,255,.04); line-height: 1; margin-bottom: 20px; transition: color .3s; }
+    .svc-card:hover .svc-num { color: var(--red-dim); }
+    .svc-icon { width: 40px; height: 40px; color: var(--red); margin-bottom: 20px; }
+    .svc-name { font-family: var(--fh); font-size: 1.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; margin-bottom: 14px; line-height: 1.1; }
+    .svc-desc { font-size: .83rem; color: var(--t2); line-height: 1.72; }
+    .svc-tags { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { font-size: .6rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--t3); border: 1px solid var(--border); padding: 5px 10px; transition: color .2s, border-color .2s; }
+    .svc-card:hover .tag { color: var(--red); border-color: rgba(214,48,32,.3); }
+
+    /* ── SERVICIOS ESPECIALES ──────────────────── */
+    .special-banner {
+      background: var(--s1);
+      border-top: 3px solid var(--red);
+      padding: 64px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      margin-top: 2px;
+    }
+    .special-card {
+      background: var(--s2);
+      padding: 44px 40px;
+      display: flex;
+      align-items: flex-start;
+      gap: 28px;
+      transition: background .3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .special-card::before {
+      content: 'GRATIS';
+      position: absolute;
+      top: 20px; right: 20px;
+      font-family: var(--fh);
+      font-size: .65rem;
+      font-weight: 700;
+      letter-spacing: .15em;
+      color: var(--red);
+      border: 1px solid var(--red);
+      padding: 4px 10px;
+    }
+    .special-card.paid::before { content: 'SERVICIO'; color: var(--t3); border-color: var(--t3); }
+    .special-card:hover { background: var(--s3); }
+    .special-icon-wrap {
+      width: 60px; height: 60px; flex-shrink: 0;
+      background: var(--red-dim);
+      border: 1px solid rgba(214,48,32,.3);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--red);
+    }
+    .special-body h3 { font-family: var(--fh); font-size: 1.6rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; }
+    .special-body p { font-size: .85rem; color: var(--t2); line-height: 1.7; margin-bottom: 16px; }
+    .btn-special {
+      font-size: .65rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--t1); background: var(--red); padding: 10px 22px;
+      border: none; cursor: pointer; font-family: var(--fb);
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: opacity .2s; text-decoration: none;
+    }
+    .btn-special:hover { opacity: .85; }
+
+    /* ── ESPACIO ───────────────────────────────── */
+    #espacio { padding: 0 64px 128px; }
+    .espacio-wrap { background: var(--s1); display: grid; grid-template-columns: 1fr 1fr; }
+    .espacio-imgs { display: grid; grid-template-rows: 1fr 1fr; gap: 2px; overflow: hidden; }
+    .espacio-img-wrap { overflow: hidden; }
+    .espacio-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s var(--ease); }
+    .espacio-img-wrap:hover img { transform: scale(1.04); }
+    .espacio-text { padding: 72px 64px; display: flex; flex-direction: column; justify-content: center; }
+    .espacio-text .sec-title { margin-bottom: 28px; }
+    .espacio-text p { font-size: .88rem; color: var(--t2); line-height: 1.78; margin-bottom: 14px; }
+    .specs-grid { margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+    .spec { background: var(--s2); padding: 22px 20px; border-left: 2px solid var(--red); }
+    .spec-val { font-family: var(--fh); font-size: 1.9rem; font-weight: 800; line-height: 1; }
+    .spec-lbl { font-size: .62rem; font-weight: 500; letter-spacing: .15em; text-transform: uppercase; color: var(--t3); margin-top: 5px; }
+    .img-strip { width: 100%; height: 380px; overflow: hidden; position: relative; }
+    .img-strip img { width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
+    .img-strip-overlay { position: absolute; inset: 0; background: linear-gradient(to right, var(--bg) 0%, transparent 30%, transparent 70%, var(--bg) 100%); }
+
+    /* ── PROCESO ───────────────────────────────── */
+    #proceso { background: var(--s1); }
+    .proceso-header { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: end; margin-bottom: 80px; }
+    .proceso-header p { font-size: .88rem; color: var(--t2); line-height: 1.78; }
+    .steps-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+    .step { background: var(--s2); padding: 48px 36px; position: relative; }
+    .step-bg-num { position: absolute; top: 16px; right: 20px; font-family: var(--fh); font-size: 5.5rem; font-weight: 900; color: rgba(255,255,255,.03); line-height: 1; pointer-events: none; }
+    .step-icon { width: 52px; height: 52px; background: var(--red-dim); border: 1px solid rgba(214,48,32,.28); display: flex; align-items: center; justify-content: center; margin-bottom: 28px; color: var(--red); }
+    .step-title { font-family: var(--fh); font-size: 1.45rem; font-weight: 700; text-transform: uppercase; margin-bottom: 14px; }
+    .step-desc { font-size: .85rem; color: var(--t2); line-height: 1.72; }
+
+    /* ── CONTACTO ──────────────────────────────── */
+    #contacto { padding: 160px 64px; text-align: center; position: relative; overflow: hidden; }
+    #contacto::before { content: 'SERVICE'; position: absolute; font-family: var(--fh); font-size: 24vw; font-weight: 900; letter-spacing: -.03em; text-transform: uppercase; color: rgba(255,255,255,.018); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap; }
+    .cta-label { font-size: .62rem; font-weight: 500; letter-spacing: .38em; text-transform: uppercase; color: var(--red); margin-bottom: 18px; position: relative; }
+    .cta-title { font-family: var(--fh); font-size: clamp(3.5rem, 8vw, 8rem); font-weight: 900; text-transform: uppercase; line-height: .9; letter-spacing: -.02em; margin-bottom: 36px; position: relative; }
+    .cta-sub { font-size: .9rem; color: var(--t2); max-width: 440px; margin: 0 auto 56px; line-height: 1.75; position: relative; }
+    .cta-btns { display: flex; gap: 14px; justify-content: center; position: relative; }
+    .btn-wa { font-size: .72rem; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: #fff; background: #25d366; padding: 16px 42px; text-decoration: none; transition: opacity .2s, transform .2s; display: inline-flex; align-items: center; gap: 10px; }
+    .btn-wa:hover { opacity: .85; transform: translateY(-2px); }
+    footer { background: var(--s1); border-top: 1px solid var(--border); padding: 36px 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .footer-logo { font-family: var(--fh); font-size: 1.2rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+    .footer-logo em { color: var(--red); font-style: normal; }
+    .footer-copy { font-size: .68rem; color: var(--t3); letter-spacing: .06em; }
+
+    /* ══════════════════════════════════════════════
+       TURNERO / BOOKING MODAL
+    ══════════════════════════════════════════════ */
+    .turnero-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,.85);
+      backdrop-filter: blur(8px);
+      display: flex; align-items: stretch; justify-content: flex-end;
+      opacity: 0; pointer-events: none;
+      transition: opacity .4s var(--ease);
+    }
+    .turnero-overlay.open { opacity: 1; pointer-events: all; }
+
+    .turnero-panel {
+      width: min(640px, 100vw);
+      background: var(--s1);
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform .5s var(--ease);
+      border-left: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .turnero-overlay.open .turnero-panel { transform: translateX(0); }
+
+    /* header */
+    .t-header {
+      background: var(--bg);
+      padding: 28px 36px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .t-header-left h2 { font-family: var(--fh); font-size: 1.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+    .t-header-left p { font-size: .72rem; color: var(--t3); letter-spacing: .1em; text-transform: uppercase; margin-top: 4px; }
+    .t-close { width: 40px; height: 40px; border: 1px solid var(--border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--t2); transition: border-color .2s, color .2s; }
+    .t-close:hover { border-color: var(--red); color: var(--red); }
+
+    /* steps indicator */
+    .t-steps {
+      padding: 20px 36px;
+      display: flex; gap: 8px; align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: var(--s2);
+      flex-shrink: 0;
+    }
+    .t-step-dot {
+      display: flex; align-items: center; gap: 8px;
+      font-size: .62rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--t3); white-space: nowrap;
+    }
+    .t-step-dot .dot {
+      width: 24px; height: 24px; border-radius: 0;
+      background: var(--s3); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--fh); font-size: .85rem; font-weight: 700;
+      transition: background .3s, color .3s;
+    }
+    .t-step-dot.active .dot { background: var(--red); color: #fff; border-color: var(--red); }
+    .t-step-dot.done .dot { background: rgba(214,48,32,.2); color: var(--red); border-color: rgba(214,48,32,.4); }
+    .t-step-dot.active { color: var(--t1); }
+    .t-step-line { flex: 1; height: 1px; background: var(--border); min-width: 20px; }
+
+    /* content area */
+    .t-body { flex: 1; overflow-y: auto; padding: 36px; }
+    .t-body::-webkit-scrollbar { width: 4px; }
+    .t-body::-webkit-scrollbar-track { background: transparent; }
+    .t-body::-webkit-scrollbar-thumb { background: var(--s3); }
+
+    /* step panels */
+    .t-panel { display: none; }
+    .t-panel.active { display: block; }
+
+    .t-section-title { font-family: var(--fh); font-size: 1.3rem; font-weight: 700; text-transform: uppercase; margin-bottom: 20px; color: var(--t1); }
+
+    /* service selector */
+    .svc-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .svc-opt {
+      padding: 20px 18px;
+      background: var(--s2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      text-align: left;
+    }
+    .svc-opt:hover { border-color: rgba(214,48,32,.4); background: var(--s3); }
+    .svc-opt.selected { border-color: var(--red); background: var(--red-dim); }
+    .svc-opt-name { font-family: var(--fh); font-size: 1.1rem; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+    .svc-opt-sub { font-size: .72rem; color: var(--t3); letter-spacing: .05em; }
+    .svc-opt.free .svc-opt-name::after { content: ' · GRATIS'; color: var(--red); font-size: .85rem; }
+
+    /* calendar */
+    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .cal-nav button { width: 36px; height: 36px; background: var(--s2); border: 1px solid var(--border); color: var(--t1); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: border-color .2s; }
+    .cal-nav button:hover { border-color: var(--red); }
+    .cal-month { font-family: var(--fh); font-size: 1.3rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-dow { text-align: center; font-size: .6rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--t3); padding: 8px 0; }
+    .cal-day {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      font-size: .85rem; font-weight: 500;
+      cursor: pointer; border: 1px solid transparent;
+      transition: border-color .2s, background .2s, color .2s;
+    }
+    .cal-day:hover:not(.disabled):not(.empty) { border-color: rgba(214,48,32,.5); background: var(--red-dim); }
+    .cal-day.selected { background: var(--red); color: #fff; border-color: var(--red); }
+    .cal-day.disabled { color: var(--s3); cursor: not-allowed; }
+    .cal-day.empty { cursor: default; }
+    .cal-day.today { border-color: var(--border); }
+
+    /* time slots */
+    .slots-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .slot {
+      padding: 16px 8px; text-align: center;
+      background: var(--s2); border: 1px solid var(--border);
+      cursor: pointer; transition: border-color .2s, background .2s;
+      font-size: .85rem; font-weight: 500;
+    }
+    .slot:hover:not(.busy) { border-color: rgba(214,48,32,.5); background: var(--red-dim); }
+    .slot.selected { background: var(--red); border-color: var(--red); color: #fff; }
+    .slot.busy { color: var(--t3); cursor: not-allowed; }
+    .slot-status { font-size: .6rem; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); margin-top: 4px; }
+    .slot.busy .slot-status { color: var(--t3); }
+    .slot.selected .slot-status { color: rgba(255,255,255,.7); }
+
+    /* form */
+    .t-form { display: flex; flex-direction: column; gap: 16px; }
+    .t-field { display: flex; flex-direction: column; gap: 8px; }
+    .t-label { font-size: .65rem; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--t3); }
+    .t-input, .t-textarea, .t-select {
+      background: var(--s2); border: 1px solid var(--border);
+      color: var(--t1); font-family: var(--fb); font-size: .88rem;
+      padding: 14px 16px; outline: none;
+      transition: border-color .2s;
+      width: 100%;
+    }
+    .t-input:focus, .t-textarea:focus, .t-select:focus { border-color: var(--red); }
+    .t-textarea { resize: none; height: 90px; }
+    .t-select option { background: var(--s2); }
+    .t-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* summary */
+    .t-summary {
+      background: var(--s2); border: 1px solid var(--border);
+      padding: 24px; margin-bottom: 24px;
+    }
+    .t-summary-title { font-size: .62rem; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--t3); margin-bottom: 14px; }
+    .t-summary-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .t-summary-row:last-child { border-bottom: none; }
+    .t-summary-key { font-size: .78rem; color: var(--t3); }
+    .t-summary-val { font-size: .88rem; font-weight: 500; color: var(--t1); text-align: right; }
+    .t-summary-val.highlight { color: var(--red); font-family: var(--fh); font-size: 1rem; font-weight: 700; text-transform: uppercase; }
+
+    /* footer actions */
+    .t-footer {
+      padding: 20px 36px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 12px; justify-content: space-between; align-items: center;
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+    .t-back { font-size: .7rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--t3); background: transparent; border: 1px solid var(--border); padding: 14px 24px; cursor: pointer; font-family: var(--fb); transition: color .2s, border-color .2s; }
+    .t-back:hover { color: var(--t1); border-color: var(--t2); }
+    .t-next { font-size: .7rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--t1); background: var(--red); border: none; padding: 14px 32px; cursor: pointer; font-family: var(--fb); flex: 1; transition: opacity .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .t-next:hover { opacity: .85; }
+    .t-next:disabled { opacity: .35; cursor: not-allowed; }
+
+    /* success state */
+    .t-success { text-align: center; padding: 48px 24px; display: none; }
+    .t-success.show { display: block; }
+    .t-success-icon { width: 72px; height: 72px; background: var(--red-dim); border: 1px solid rgba(214,48,32,.4); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--red); }
+    .t-success h3 { font-family: var(--fh); font-size: 2rem; font-weight: 800; text-transform: uppercase; margin-bottom: 12px; }
+    .t-success p { font-size: .88rem; color: var(--t2); line-height: 1.7; margin-bottom: 32px; }
+    .t-success-actions { display: flex; flex-direction: column; gap: 10px; max-width: 280px; margin: 0 auto; }
+
+    /* error/loading states */
+    .t-msg { font-size: .82rem; padding: 12px 16px; margin-top: 12px; }
+    .t-msg.error { background: rgba(214,48,32,.12); border: 1px solid rgba(214,48,32,.3); color: #ff8070; }
+    .t-msg.loading { color: var(--t3); }
+
+    /* ── ANIMACIONES ───────────────────────────── */
+    @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideInRight { to { opacity: 1; transform: translateX(0); } }
+    @keyframes slideInLeft { to { opacity: 1; transform: translateX(0); } }
+    @keyframes runDown { 0% { top: -100%; opacity: 1; } 100% { top: 100%; opacity: 0; } }
+
+    .rv { opacity: 0; transform: translateY(44px); transition: opacity .85s var(--ease), transform .85s var(--ease); }
+    .rv.in { opacity: 1; transform: translateY(0); }
+    .rv-d1 { transition-delay: .1s; } .rv-d2 { transition-delay: .2s; }
+    .rv-d3 { transition-delay: .3s; } .rv-d4 { transition-delay: .4s; }
+
+    /* ── RESPONSIVE ────────────────────────────── */
+    @media (max-width: 1100px) { .svc-grid { grid-template-columns: repeat(2, 1fr); } .special-banner { grid-template-columns: 1fr; padding: 40px 24px; } }
+    @media (max-width: 900px) {
+      nav, nav.scrolled { padding: 18px 24px; }
+      .nav-links { display: none; }
+      .sec { padding: 80px 24px; }
+      #espacio { padding: 0 24px 80px; }
+      .espacio-wrap { grid-template-columns: 1fr; }
+      .espacio-imgs { grid-template-rows: 240px 240px; }
+      .espacio-text { padding: 48px 32px; }
+      .proceso-header { grid-template-columns: 1fr; gap: 24px; }
+      .steps-row { grid-template-columns: 1fr; }
+      .hero-strip { display: none; }
+      .svc-header { flex-direction: column; align-items: flex-start; }
+      .svc-grid { grid-template-columns: 1fr; }
+      footer { flex-direction: column; text-align: center; padding: 28px 24px; }
+      #contacto { padding: 100px 24px; }
+      .cta-btns { flex-direction: column; align-items: center; }
+      .turnero-panel { width: 100vw; }
+      .t-body { padding: 24px; }
+      .t-header { padding: 20px 24px; }
+      .t-footer { padding: 16px 24px; }
+      .svc-options { grid-template-columns: 1fr; }
+      .slots-grid { grid-template-columns: repeat(3, 1fr); }
+      .t-grid2 { grid-template-columns: 1fr; }
+      .t-steps { padding: 14px 24px; gap: 4px; }
+      .t-step-dot span { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ NAV ═══════════════════════════════════════════ -->
+  <nav id="nav">
+    <a href="#" class="logo">Express<em>.</em>Service</a>
+    <ul class="nav-links">
+      <li><a href="#servicios">Servicios</a></li>
+      <li><a href="#espacio">El Taller</a></li>
+      <li><a href="#proceso">Proceso</a></li>
+      <li><a href="#contacto">Contacto</a></li>
+    </ul>
+    <button class="nav-btn" onclick="openTurnero()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Reservar Turno
+    </button>
+  </nav>
+
+  <!-- ══ HERO ══════════════════════════════════════════ -->
+  <section id="hero">
+    <div class="hero-topbar"></div>
+    <div class="hero-bg">
+      <img id="hero-img" src="WhatsApp Image 2026-05-30 at 19.11.03.jpeg" alt="Taller Express Service">
+      <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-body">
+      <p class="hero-eyebrow">Mecánica · Tren Delantero · Detailing · Gomería</p>
+      <h1 class="hero-h1">
+        <span class="l1">Express</span>
+        <span class="l2">Service</span>
+      </h1>
+      <p class="hero-sub">Precisión técnica, tecnología 3D y atención de élite.<br>Tu vehículo en manos expertas.</p>
+      <div class="hero-actions">
+        <button class="btn-red" onclick="openTurnero()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          Reservar Turno
+        </button>
+        <a href="#servicios" class="btn-outline">Ver Servicios</a>
+      </div>
+    </div>
+    <div class="hero-strip">
+      <div class="strip-item"><div class="strip-val">3D<em>+</em></div><div class="strip-lbl">Alineación Digital</div></div>
+      <div class="strip-item"><div class="strip-val">120<em>m²</em></div><div class="strip-lbl">Superficie Total</div></div>
+      <div class="strip-item"><div class="strip-val">5<em>+</em></div><div class="strip-lbl">Zonas Especializadas</div></div>
+      <div class="strip-item"><div class="strip-val">4<em>col</em></div><div class="strip-lbl">Elevador Hidráulico</div></div>
+    </div>
+    <div class="scroll-cue"><span>Scroll</span><div class="scroll-line"></div></div>
+  </section>
+
+  <!-- ══ SERVICIOS ═════════════════════════════════════ -->
+  <section id="servicios" class="sec">
+    <div class="svc-header">
+      <div>
+        <p class="sec-label rv">Nuestros Servicios</p>
+        <h2 class="sec-title rv rv-d1">Tecnología al<br>servicio de<br>tu vehículo</h2>
+      </div>
+      <p class="svc-header-right rv rv-d2">Cuatro zonas especializadas, un solo objetivo: entregarte tu auto en condiciones óptimas, en tiempo y forma, con presupuesto transparente.</p>
+    </div>
+    <div class="svc-grid">
+      <div class="svc-card rv rv-d1">
+        <div class="svc-num">01</div>
+        <svg class="svc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3-3a1 1 0 000-1.4l-1.6-1.6a1 1 0 00-1.4 0l-3 3z"/><path d="M3 21l8.4-8.4M14 8l-11 11"/></svg>
+        <h3 class="svc-name">Mecánica General</h3>
+        <p class="svc-desc">Diagnóstico computarizado, reparación de motor, frenos, embrague, distribución y todo lo que tu auto necesita con garantía.</p>
+        <div class="svc-tags"><span class="tag">Motor</span><span class="tag">Frenos</span><span class="tag">Embrague</span><span class="tag">OBD</span></div>
+      </div>
+      <div class="svc-card rv rv-d2">
+        <div class="svc-num">02</div>
+        <svg class="svc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01M8 12h8"/></svg>
+        <h3 class="svc-name">Tren Delantero</h3>
+        <p class="svc-desc">Alineación 3D digital con cámaras de última generación. Suspensión, dirección, rótulas, bujes y geometría de precisión milimétrica.</p>
+        <div class="svc-tags"><span class="tag">Alineación 3D</span><span class="tag">Suspensión</span><span class="tag">Dirección</span><span class="tag">Rótulas</span></div>
+      </div>
+      <div class="svc-card rv rv-d3">
+        <div class="svc-num">03</div>
+        <svg class="svc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <h3 class="svc-name">Detailing Premium</h3>
+        <p class="svc-desc">Lustrado, corrección de pintura y protección cerámica en zona exclusiva con iluminación LED perimetral. Acabados de showroom.</p>
+        <div class="svc-tags"><span class="tag">Corrección</span><span class="tag">Cerámica</span><span class="tag">Pulido</span><span class="tag">LED Studio</span></div>
+      </div>
+      <div class="svc-card rv rv-d4">
+        <div class="svc-num">04</div>
+        <svg class="svc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="10"/><path d="M8 12s1.5 2 4 2 4-2 4-2"/></svg>
+        <h3 class="svc-name">Gomería & Lavado</h3>
+        <p class="svc-desc">Cambio de neumáticos con balanceadora profesional y lavado húmedo en zona aislada con cortinas PVC y rejilla de desagüe.</p>
+        <div class="svc-tags"><span class="tag">Neumáticos</span><span class="tag">Balanceo</span><span class="tag">Lavado Pro</span><span class="tag">Zona PVC</span></div>
+      </div>
+    </div>
+
+    <!-- Servicios especiales -->
+    <div class="special-banner rv">
+      <div class="special-card">
+        <div class="special-icon-wrap">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <div class="special-body">
+          <h3>Revisión Pre-Viaje</h3>
+          <p>Antes de salir de viaje te revisamos frenos, neumáticos, niveles, luces y suspensión sin cargo. Tu seguridad no tiene costo.</p>
+          <button class="btn-special" onclick="openTurnero('previaje')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Reservar Gratis
+          </button>
+        </div>
+      </div>
+      <div class="special-card paid">
+        <div class="special-icon-wrap">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </div>
+        <div class="special-body">
+          <h3>Inspección Auto Usado</h3>
+          <p>¿Estás por comprar un usado? Traelo al taller o coordinamos un peritaje técnico completo antes de que tomes la decisión.</p>
+          <button class="btn-special" onclick="openTurnero('usado')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            Coordinar Peritaje
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ ESPACIO ════════════════════════════════════════ -->
+  <section id="espacio">
+    <div class="espacio-wrap">
+      <div class="espacio-imgs rv">
+        <div class="espacio-img-wrap"><img src="WhatsApp Image 2026-05-30 at 19.10.57.jpeg" alt="Interior del taller"></div>
+        <div class="espacio-img-wrap"><img src="WhatsApp Image 2026-05-30 at 19.11.00.jpeg" alt="Zona detailing y lavado"></div>
+      </div>
+      <div class="espacio-text">
+        <p class="sec-label rv">El Taller</p>
+        <h2 class="sec-title rv rv-d1">Un espacio<br>diseñado para<br>la excelencia</h2>
+        <p class="rv rv-d2">Nuestro local de 8 × 15 m fue diseñado desde cero con cada zona optimizada para un servicio específico. Flujo de trabajo eficiente, equipamiento de nivel profesional.</p>
+        <p class="rv rv-d3">Elevador 4 columnas, alineación 3D con cámaras, desarmadora y balanceadora digital, compresor insonorizado y oficina vidriada para ver el trabajo en tiempo real.</p>
+        <div class="specs-grid rv rv-d4">
+          <div class="spec"><div class="spec-val">120 m²</div><div class="spec-lbl">Superficie Total</div></div>
+          <div class="spec"><div class="spec-val">5 Zonas</div><div class="spec-lbl">Especializadas</div></div>
+          <div class="spec"><div class="spec-val">4 Col.</div><div class="spec-lbl">Elevador Hidráulico</div></div>
+          <div class="spec"><div class="spec-val">3D Cam</div><div class="spec-lbl">Alineación Digital</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="img-strip rv">
+    <img src="WhatsApp Image 2026-05-30 at 19.11.07.jpeg" alt="Vista isométrica Express Service">
+    <div class="img-strip-overlay"></div>
+  </div>
+
+  <!-- ══ PROCESO ════════════════════════════════════════ -->
+  <section id="proceso" class="sec">
+    <div class="proceso-header">
+      <div>
+        <p class="sec-label rv">¿Cómo funciona?</p>
+        <h2 class="sec-title rv rv-d1">Tu turno<br>en 3 pasos</h2>
+      </div>
+      <p class="rv rv-d2">Sin filas ni esperas innecesarias. Coordinamos tu visita, trabajamos con precisión y te entregamos el vehículo en el tiempo acordado. Transparencia en cada etapa.</p>
+    </div>
+    <div class="steps-row">
+      <div class="step rv">
+        <div class="step-bg-num">01</div>
+        <div class="step-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+        <h3 class="step-title">Reservá tu turno</h3>
+        <p class="step-desc">Elegí fecha, horario y servicio desde el sistema online. Confirmamos disponibilidad al instante.</p>
+      </div>
+      <div class="step rv rv-d1">
+        <div class="step-bg-num">02</div>
+        <div class="step-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+        <h3 class="step-title">Diagnóstico Express</h3>
+        <p class="step-desc">Al llegar evaluamos tu vehículo y te damos el presupuesto sin sorpresas antes de comenzar.</p>
+      </div>
+      <div class="step rv rv-d2">
+        <div class="step-bg-num">03</div>
+        <div class="step-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+        <h3 class="step-title">Entrega Garantizada</h3>
+        <p class="step-desc">Trabajamos en los tiempos pactados. Te notificamos al instante cuando tu auto está listo.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CONTACTO ════════════════════════════════════════ -->
+  <section id="contacto">
+    <p class="cta-label rv">Reservar Turno</p>
+    <h2 class="cta-title rv rv-d1">¿Listo para<br>empezar?</h2>
+    <p class="cta-sub rv rv-d2">Contactanos ahora y coordinamos el turno para tu vehículo. Atención rápida, presupuesto transparente, trabajo garantizado.</p>
+    <div class="cta-btns rv rv-d3">
+      <a href="https://wa.me/5491166614164?text=Hola%2C%20quiero%20reservar%20un%20turno%20en%20Express%20Service" class="btn-wa" target="_blank">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        WhatsApp
+      </a>
+      <button class="btn-red" onclick="openTurnero()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Reservar Online
+      </button>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ══════════════════════════════════════════ -->
+  <footer>
+    <div class="footer-logo">Express<em>.</em>Service</div>
+    <p class="footer-copy">Taller de Mecánica · Tren Delantero · Detailing · Gomería</p>
+    <p class="footer-copy">© 2026 Express Service. Todos los derechos reservados.</p>
+  </footer>
+
+  <!-- ══ TURNERO MODAL ═══════════════════════════════════ -->
+  <div class="turnero-overlay" id="turneroOverlay" onclick="handleOverlayClick(event)">
+    <div class="turnero-panel" id="turneroPanel">
+
+      <!-- Header -->
+      <div class="t-header">
+        <div class="t-header-left">
+          <h2>Reservar Turno</h2>
+          <p id="t-step-label">Paso 1 de 4 · Elegí el servicio</p>
+        </div>
+        <button class="t-close" onclick="closeTurnero()" aria-label="Cerrar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Steps indicator -->
+      <div class="t-steps">
+        <div class="t-step-dot active" id="dot1"><div class="dot">1</div><span>Servicio</span></div>
+        <div class="t-step-line"></div>
+        <div class="t-step-dot" id="dot2"><div class="dot">2</div><span>Fecha</span></div>
+        <div class="t-step-line"></div>
+        <div class="t-step-dot" id="dot3"><div class="dot">3</div><span>Horario</span></div>
+        <div class="t-step-line"></div>
+        <div class="t-step-dot" id="dot4"><div class="dot">4</div><span>Datos</span></div>
+      </div>
+
+      <!-- Body -->
+      <div class="t-body">
+
+        <!-- PASO 1: Servicio -->
+        <div class="t-panel active" id="panel1">
+          <p class="t-section-title">¿Qué necesitás?</p>
+          <div class="svc-options" id="svcOptions">
+            <div class="svc-opt" data-value="Mecánica General" onclick="selectService(this)">
+              <div class="svc-opt-name">Mecánica General</div>
+              <div class="svc-opt-sub">Motor · Frenos · Embrague · OBD</div>
+            </div>
+            <div class="svc-opt" data-value="Tren Delantero / Alineación 3D" onclick="selectService(this)">
+              <div class="svc-opt-name">Tren Delantero</div>
+              <div class="svc-opt-sub">Alineación 3D · Suspensión · Dirección</div>
+            </div>
+            <div class="svc-opt" data-value="Detailing Premium" onclick="selectService(this)">
+              <div class="svc-opt-name">Detailing Premium</div>
+              <div class="svc-opt-sub">Pulido · Cerámica · LED Studio</div>
+            </div>
+            <div class="svc-opt" data-value="Gomería & Lavado" onclick="selectService(this)">
+              <div class="svc-opt-name">Gomería & Lavado</div>
+              <div class="svc-opt-sub">Neumáticos · Balanceo · Lavado Pro</div>
+            </div>
+            <div class="svc-opt free" data-value="Revisión Pre-Viaje (Gratuita)" onclick="selectService(this)">
+              <div class="svc-opt-name">Revisión Pre-Viaje</div>
+              <div class="svc-opt-sub">Frenos · Neumáticos · Niveles · Luces</div>
+            </div>
+            <div class="svc-opt" data-value="Inspección Auto Usado" onclick="selectService(this)">
+              <div class="svc-opt-name">Inspección Auto Usado</div>
+              <div class="svc-opt-sub">Peritaje técnico completo previo compra</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PASO 2: Fecha -->
+        <div class="t-panel" id="panel2">
+          <p class="t-section-title">Elegí una fecha</p>
+          <div class="cal-nav">
+            <button onclick="changeMonth(-1)" aria-label="Mes anterior">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span class="cal-month" id="calMonth"></span>
+            <button onclick="changeMonth(1)" aria-label="Mes siguiente">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+
+        <!-- PASO 3: Horario -->
+        <div class="t-panel" id="panel3">
+          <p class="t-section-title" id="slotsTitle">Horarios disponibles</p>
+          <div class="slots-grid" id="slotsGrid"></div>
+        </div>
+
+        <!-- PASO 4: Datos de contacto -->
+        <div class="t-panel" id="panel4">
+          <div class="t-summary" id="tSummary"></div>
+          <p class="t-section-title">Tus datos</p>
+          <div class="t-form">
+            <div class="t-grid2">
+              <div class="t-field">
+                <label class="t-label">Nombre *</label>
+                <input class="t-input" id="f-nombre" type="text" placeholder="Tu nombre" required>
+              </div>
+              <div class="t-field">
+                <label class="t-label">Apellido *</label>
+                <input class="t-input" id="f-apellido" type="text" placeholder="Tu apellido" required>
+              </div>
+            </div>
+            <div class="t-grid2">
+              <div class="t-field">
+                <label class="t-label">Teléfono *</label>
+                <input class="t-input" id="f-tel" type="tel" placeholder="11 xxxx xxxx" required>
+              </div>
+              <div class="t-field">
+                <label class="t-label">Email *</label>
+                <input class="t-input" id="f-email" type="email" placeholder="tu@email.com" required>
+              </div>
+            </div>
+            <div class="t-field">
+              <label class="t-label">Vehículo (marca, modelo, año)</label>
+              <input class="t-input" id="f-auto" type="text" placeholder="Ej: Toyota Corolla 2019">
+            </div>
+            <div class="t-field">
+              <label class="t-label">Notas adicionales</label>
+              <textarea class="t-textarea" id="f-notas" placeholder="Describí brevemente el problema o consulta..."></textarea>
+            </div>
+            <div id="tMsg"></div>
+          </div>
+        </div>
+
+        <!-- SUCCESS -->
+        <div class="t-success" id="tSuccess">
+          <div class="t-success-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3>¡Turno Reservado!</h3>
+          <p>Te enviamos la confirmación por mail. Te contactaremos para confirmar el turno a la brevedad.</p>
+          <div class="t-success-actions">
+            <a id="waConfirm" href="#" class="btn-wa" target="_blank">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              Confirmar por WhatsApp
+            </a>
+            <button class="btn-red" onclick="closeTurnero()" style="width:100%;justify-content:center;">Cerrar</button>
+          </div>
+        </div>
+
+      </div><!-- /t-body -->
+
+      <!-- Footer actions -->
+      <div class="t-footer" id="tFooter">
+        <button class="t-back" id="tBack" onclick="prevStep()" style="display:none">← Atrás</button>
+        <button class="t-next" id="tNext" onclick="nextStep()" disabled>
+          Siguiente
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ── PAGE BEHAVIORS ─────────────────────────── */
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 60), { passive: true });
+
+    const heroImg = document.getElementById('hero-img');
+    const heroH = document.getElementById('hero').offsetHeight;
+    window.addEventListener('scroll', () => {
+      if (scrollY < heroH) heroImg.style.transform = `scale(1.08) translateY(${scrollY * .12}px)`;
+    }, { passive: true });
+
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.1, rootMargin: '0px 0px -64px 0px' });
+    document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const t = document.querySelector(a.getAttribute('href'));
+        if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth' }); }
+      });
+    });
+
+    /* ── TURNERO STATE ──────────────────────────── */
+    let currentStep = 1;
+    const state = { servicio: '', fecha: null, horario: '', nombre: '', apellido: '', tel: '', email: '', auto: '', notas: '' };
+    let calYear, calMonth;
+
+    const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const DAYS_ES   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+    const SLOTS     = ['08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00'];
+    /* Simulated busy slots (key = "YYYY-M-D-HH:mm") */
+    const BUSY_SEED = [2,5,7,11,14]; /* positions in SLOTS that look busy for odd days */
+
+    function isBusy(date, slot) {
+      const d = date.getDate();
+      const idx = SLOTS.indexOf(slot);
+      return (d % 3 === 1) && BUSY_SEED.includes(idx);
+    }
+
+    /* ── TURNERO OPEN/CLOSE ─────────────────────── */
+    function openTurnero(preset) {
+      document.body.style.overflow = 'hidden';
+      document.getElementById('turneroOverlay').classList.add('open');
+      if (preset === 'previaje') preselectService('Revisión Pre-Viaje (Gratuita)');
+      if (preset === 'usado')    preselectService('Inspección Auto Usado');
+    }
+    function closeTurnero() {
+      document.getElementById('turneroOverlay').classList.remove('open');
+      document.body.style.overflow = '';
+      setTimeout(resetTurnero, 500);
+    }
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById('turneroOverlay')) closeTurnero();
+    }
+
+    function preselectService(val) {
+      setTimeout(() => {
+        const opts = document.querySelectorAll('.svc-opt');
+        opts.forEach(o => {
+          if (o.dataset.value === val) { selectService(o); }
+        });
+      }, 200);
+    }
+
+    function resetTurnero() {
+      currentStep = 1;
+      Object.keys(state).forEach(k => { state[k] = k === 'fecha' ? null : ''; });
+      document.querySelectorAll('.svc-opt').forEach(o => o.classList.remove('selected'));
+      document.getElementById('tSuccess').classList.remove('show');
+      document.getElementById('tSuccess').style.display = '';
+      document.getElementById('tMsg').innerHTML = '';
+      ['f-nombre','f-apellido','f-tel','f-email','f-auto','f-notas'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      goToStep(1);
+    }
+
+    /* ── STEP NAVIGATION ────────────────────────── */
+    const STEP_LABELS = ['', 'Elegí el servicio', 'Elegí una fecha', 'Seleccioná el horario', 'Completá tus datos'];
+
+    function goToStep(n) {
+      currentStep = n;
+      document.querySelectorAll('.t-panel').forEach(p => p.classList.remove('active'));
+      const panel = document.getElementById('panel' + n);
+      if (panel) panel.classList.add('active');
+
+      document.getElementById('t-step-label').textContent = `Paso ${n} de 4 · ${STEP_LABELS[n]}`;
+
+      // dots
+      for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById('dot' + i);
+        dot.classList.remove('active', 'done');
+        if (i < n) dot.classList.add('done');
+        if (i === n) dot.classList.add('active');
+      }
+
+      document.getElementById('tBack').style.display = n > 1 ? '' : 'none';
+      document.getElementById('tNext').textContent = n === 4 ? 'Confirmar Reserva' : 'Siguiente';
+      document.getElementById('tNext').innerHTML = n < 4
+        ? 'Siguiente <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>'
+        : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Confirmar Reserva';
+
+      validateStep();
+
+      if (n === 2) renderCalendar();
+      if (n === 3) renderSlots();
+      if (n === 4) renderSummary();
+    }
+
+    function nextStep() {
+      if (currentStep === 4) { submitReserva(); return; }
+      if (currentStep < 4) goToStep(currentStep + 1);
+    }
+    function prevStep() { if (currentStep > 1) goToStep(currentStep - 1); }
+
+    function validateStep() {
+      let ok = false;
+      if (currentStep === 1) ok = !!state.servicio;
+      if (currentStep === 2) ok = !!state.fecha;
+      if (currentStep === 3) ok = !!state.horario;
+      if (currentStep === 4) ok = true; // validated on submit
+      document.getElementById('tNext').disabled = !ok;
+    }
+
+    /* ── SERVICE SELECTION ──────────────────────── */
+    function selectService(el) {
+      document.querySelectorAll('.svc-opt').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+      state.servicio = el.dataset.value;
+      validateStep();
+    }
+
+    /* ── CALENDAR ───────────────────────────────── */
+    function renderCalendar() {
+      const now = new Date();
+      if (!calYear) { calYear = now.getFullYear(); calMonth = now.getMonth(); }
+      const monthLabel = document.getElementById('calMonth');
+      monthLabel.textContent = `${MONTHS_ES[calMonth]} ${calYear}`;
+
+      const grid = document.getElementById('calGrid');
+      grid.innerHTML = '';
+
+      DAYS_ES.forEach(d => { const el = document.createElement('div'); el.className = 'cal-dow'; el.textContent = d; grid.appendChild(el); });
+
+      const firstDay = new Date(calYear, calMonth, 1).getDay();
+      const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+      const today = new Date(); today.setHours(0,0,0,0);
+
+      for (let i = 0; i < firstDay; i++) {
+        const el = document.createElement('div'); el.className = 'cal-day empty'; grid.appendChild(el);
+      }
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = new Date(calYear, calMonth, d);
+        const el = document.createElement('div');
+        el.className = 'cal-day';
+        el.textContent = d;
+        const isPast = date < today;
+        const isSun  = date.getDay() === 0;
+        if (isPast || isSun) { el.classList.add('disabled'); }
+        else {
+          if (date.toDateString() === today.toDateString()) el.classList.add('today');
+          if (state.fecha && date.toDateString() === state.fecha.toDateString()) el.classList.add('selected');
+          el.addEventListener('click', () => selectDay(date, el));
+        }
+        grid.appendChild(el);
+      }
+    }
+
+    function selectDay(date, el) {
+      state.fecha = date;
+      state.horario = ''; // reset horario if date changes
+      document.querySelectorAll('.cal-day').forEach(d => d.classList.remove('selected'));
+      el.classList.add('selected');
+      validateStep();
+    }
+
+    function changeMonth(dir) {
+      calMonth += dir;
+      if (calMonth < 0) { calMonth = 11; calYear--; }
+      if (calMonth > 11) { calMonth = 0; calYear++; }
+      const now = new Date();
+      if (calYear < now.getFullYear() || (calYear === now.getFullYear() && calMonth < now.getMonth())) {
+        calMonth = now.getMonth(); calYear = now.getFullYear();
+      }
+      renderCalendar();
+    }
+
+    /* ── TIME SLOTS ─────────────────────────────── */
+    function renderSlots() {
+      const grid = document.getElementById('slotsGrid');
+      const title = document.getElementById('slotsTitle');
+      if (state.fecha) {
+        const opts = { weekday:'long', day:'numeric', month:'long' };
+        title.textContent = state.fecha.toLocaleDateString('es-AR', opts).replace(/^\w/, c => c.toUpperCase());
+      }
+      grid.innerHTML = '';
+      SLOTS.forEach(s => {
+        const busy = isBusy(state.fecha, s);
+        const el = document.createElement('div');
+        el.className = 'slot' + (busy ? ' busy' : '') + (state.horario === s ? ' selected' : '');
+        el.innerHTML = `<div>${s}</div><div class="slot-status">${busy ? 'Ocupado' : 'Disponible'}</div>`;
+        if (!busy) el.addEventListener('click', () => selectSlot(s, el));
+        grid.appendChild(el);
+      });
+    }
+
+    function selectSlot(s, el) {
+      state.horario = s;
+      document.querySelectorAll('.slot').forEach(d => d.classList.remove('selected'));
+      el.classList.add('selected');
+      validateStep();
+    }
+
+    /* ── SUMMARY ────────────────────────────────── */
+    function renderSummary() {
+      const opts = { weekday:'long', day:'numeric', month:'long', year:'numeric' };
+      const fechaStr = state.fecha ? state.fecha.toLocaleDateString('es-AR', opts) : '';
+      document.getElementById('tSummary').innerHTML = `
+        <div class="t-summary-title">Resumen de tu reserva</div>
+        <div class="t-summary-row"><span class="t-summary-key">Servicio</span><span class="t-summary-val highlight">${state.servicio}</span></div>
+        <div class="t-summary-row"><span class="t-summary-key">Fecha</span><span class="t-summary-val">${fechaStr}</span></div>
+        <div class="t-summary-row"><span class="t-summary-key">Horario</span><span class="t-summary-val">${state.horario} hs</span></div>
+      `;
+    }
+
+    /* ── SUBMIT ─────────────────────────────────── */
+    async function submitReserva() {
+      const nombre   = document.getElementById('f-nombre').value.trim();
+      const apellido = document.getElementById('f-apellido').value.trim();
+      const tel      = document.getElementById('f-tel').value.trim();
+      const email    = document.getElementById('f-email').value.trim();
+      const auto     = document.getElementById('f-auto').value.trim();
+      const notas    = document.getElementById('f-notas').value.trim();
+
+      const msgEl = document.getElementById('tMsg');
+
+      if (!nombre || !apellido || !tel || !email) {
+        msgEl.innerHTML = '<div class="t-msg error">Completá nombre, apellido, teléfono y email para continuar.</div>';
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        msgEl.innerHTML = '<div class="t-msg error">Ingresá un email válido.</div>';
+        return;
+      }
+
+      const btn = document.getElementById('tNext');
+      btn.disabled = true;
+      msgEl.innerHTML = '<div class="t-msg loading">Enviando tu reserva...</div>';
+
+      const opts = { weekday:'long', day:'numeric', month:'long', year:'numeric' };
+      const fechaStr = state.fecha.toLocaleDateString('es-AR', opts);
+
+      const payload = {
+        nombre, apellido, tel, email, auto, notas,
+        servicio: state.servicio,
+        fecha: fechaStr,
+        horario: state.horario
+      };
+
+      try {
+        const res = await fetch('/api/reservar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Error al enviar');
+
+        // Success
+        document.querySelector('.t-body').scrollTop = 0;
+        document.querySelectorAll('.t-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('tFooter').style.display = 'none';
+        const waText = encodeURIComponent(`Hola! Hice una reserva online:\n\n✅ ${state.servicio}\n📅 ${fechaStr} a las ${state.horario} hs\n👤 ${nombre} ${apellido}\n📱 ${tel}\n🚗 ${auto || 'Sin especificar'}`);
+        document.getElementById('waConfirm').href = `https://wa.me/5491166614164?text=${waText}`;
+        document.getElementById('tSuccess').style.display = 'block';
+        document.getElementById('tSuccess').classList.add('show');
+
+      } catch (err) {
+        msgEl.innerHTML = `<div class="t-msg error">${err.message}. Intentá contactarnos por WhatsApp.</div>`;
+        btn.disabled = false;
+      }
+    }
+
+    /* Keyboard ESC */
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeTurnero(); });
+
+    /* Init cal state */
+    const nowInit = new Date();
+    calYear = nowInit.getFullYear(); calMonth = nowInit.getMonth();
+  </script>
+</body>
+</html>
