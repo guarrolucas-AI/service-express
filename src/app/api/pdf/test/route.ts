@@ -1,13 +1,8 @@
 /**
  * GET /api/pdf/test
- * Ruta de diagnóstico: renderiza un PDF mínimo para verificar que
- * @react-pdf/renderer y yoga-layout funcionan en el entorno de Vercel.
+ * Diagnóstico: import dinámico para capturar el error exacto.
  */
-
 import { NextResponse } from 'next/server'
-import { renderToBuffer, Document, Page, Text, View } from '@react-pdf/renderer'
-import type { DocumentProps } from '@react-pdf/renderer'
-import React from 'react'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,24 +10,26 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const start = Date.now()
   try {
-    console.log('[pdf/test] Cargando módulos...')
+    // Import dinámico para que cualquier fallo de módulo sea capturado aquí
+    const reactPdf = await import('@react-pdf/renderer')
+    const React    = await import('react')
 
-    const doc = React.createElement(
+    const { renderToBuffer, Document, Page, Text, View } = reactPdf
+
+    const doc = React.default.createElement(
       Document, {},
-      React.createElement(
+      React.default.createElement(
         Page, { size: 'A4', style: { padding: 40 } },
-        React.createElement(View, {},
-          React.createElement(Text, { style: { fontSize: 24, color: '#E8C547' } }, 'Express Service Alpha'),
-          React.createElement(Text, { style: { fontSize: 12, marginTop: 10 } }, `PDF generado en: ${new Date().toISOString()}`),
-          React.createElement(Text, { style: { fontSize: 10, marginTop: 5, color: '#666' } }, 'Si ves este PDF, react-pdf funciona correctamente en Vercel.'),
+        React.default.createElement(View, {},
+          React.default.createElement(Text, { style: { fontSize: 18 } }, 'Express Service — PDF test OK'),
+          React.default.createElement(Text, { style: { fontSize: 10, marginTop: 8 } }, new Date().toISOString()),
         ),
       ),
-    ) as React.ReactElement<DocumentProps>
+    )
 
-    console.log('[pdf/test] Iniciando renderToBuffer...')
-    const buffer = await renderToBuffer(doc)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const buffer = await renderToBuffer(doc as any)
     const ms = Date.now() - start
-    console.log(`[pdf/test] OK — buffer: ${buffer.length} bytes, tiempo: ${ms}ms`)
 
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
@@ -43,12 +40,12 @@ export async function GET() {
     })
   } catch (err) {
     const ms = Date.now() - start
-    console.error('[pdf/test] Error:', err)
+    console.error('[pdf/test] CRASH:', err)
     return NextResponse.json({
       ok:     false,
       ms,
       error:  String(err),
-      stack:  err instanceof Error ? err.stack : undefined,
+      stack:  err instanceof Error ? err.stack?.split('\n').slice(0, 8).join('\n') : undefined,
     }, { status: 500 })
   }
 }
