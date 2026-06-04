@@ -1,25 +1,28 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Next.js 14.2+ — no bundear estos paquetes, se cargan desde node_modules en runtime
-  serverExternalPackages: [
-    '@prisma/client',
-    '@react-pdf/renderer',
-    '@react-pdf/layout',
-    '@react-pdf/font',
-    '@react-pdf/pdfkit',
-    '@react-pdf/png-js',
-    'yoga-layout',
-    'fontkit',
-    'canvas',
-  ],
-
-  // yoga-layout carga sus binarios WASM/asm.js con require() de path relativo.
-  // El file-tracer de Vercel no los detecta → hay que declararlos explícitamente.
-  outputFileTracingIncludes: {
-    '/api/pdf/**': [
-      './node_modules/yoga-layout/binaries/**',
-      './node_modules/yoga-layout/src/**',
+  experimental: {
+    // Evitar que webpack bundlee estos módulos — se cargan desde node_modules en runtime.
+    // En Next.js 14.x la clave correcta es serverComponentsExternalPackages (no serverExternalPackages).
+    serverComponentsExternalPackages: [
+      '@prisma/client',
+      '@react-pdf/renderer',
+      '@react-pdf/layout',
+      '@react-pdf/font',
+      '@react-pdf/pdfkit',
+      '@react-pdf/png-js',
+      'yoga-layout',
+      'fontkit',
+      'canvas',
     ],
+
+    // yoga-layout carga sus binarios con require() de path relativo.
+    // Vercel no los detecta con file-tracing automático → hay que declararlos.
+    outputFileTracingIncludes: {
+      '/api/pdf/**': [
+        './node_modules/yoga-layout/binaries/**',
+        './node_modules/yoga-layout/src/**',
+      ],
+    },
   },
 
   images: {
