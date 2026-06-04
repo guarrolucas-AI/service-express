@@ -1,75 +1,124 @@
 /**
  * / — Landing del sistema interno Express Service
- * Redirige al rol correcto (mecánico / admin / cliente)
  */
 
 import Link from 'next/link'
+import { prisma } from '@/lib/db'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 
-export default function HomePage() {
+export const dynamic = 'force-dynamic'
+
+export default async function HomePage() {
+  // Obtener IDs reales de la DB para los links de demo
+  const [completedWO, workshop] = await Promise.all([
+    prisma.workOrder.findFirst({
+      where: { status: 'COMPLETED' },
+      orderBy: { completedAt: 'desc' },
+      select: { id: true, completedAt: true },
+    }),
+    prisma.workshop.findFirst({
+      where: { isActive: true },
+      select: { id: true, name: true, score: true, npsAverage: true },
+    }),
+  ])
+
+  const now = new Date()
+  const monthStr = format(now, 'yyyy-MM')
+  const dateLabel = format(now, "EEEE d 'de' MMMM", { locale: es })
+
   return (
     <div className="min-h-screen bg-steel-900 flex items-center justify-center p-6">
-      <div className="w-full max-w-md text-center">
-        {/* Logo */}
-        <h1 className="font-display font-bold text-5xl text-brand tracking-widest mb-2">
-          EXPRESS<br />SERVICE
-        </h1>
-        <p className="text-gray-500 text-sm mb-10 uppercase tracking-widest">Sistema de gestión</p>
+      <div className="w-full max-w-md">
 
-        {/* Opciones */}
-        <div className="space-y-3">
+        {/* Logo */}
+        <div className="text-center mb-10">
+          <h1 className="font-display font-bold text-5xl text-brand tracking-widest leading-none mb-2">
+            EXPRESS<br />SERVICE
+          </h1>
+          <p className="text-gray-600 text-xs uppercase tracking-widest">Sistema de gestión · Alpha</p>
+          <p className="text-gray-700 text-xs mt-1 capitalize">{dateLabel}</p>
+        </div>
+
+        {/* Score del taller */}
+        {workshop && (
+          <div className="bg-steel-800 border border-steel-600 rounded-xl p-4 mb-6 flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full border-2 border-brand flex items-center justify-center shrink-0">
+              <span className="font-display font-bold text-brand text-xl">{Math.round(workshop.score)}</span>
+            </div>
+            <div>
+              <p className="text-white font-bold">{workshop.name}</p>
+              <p className="text-gray-500 text-xs">Score Uber-style · NPS {workshop.npsAverage.toFixed(1)}/10</p>
+            </div>
+          </div>
+        )}
+
+        {/* Accesos por rol */}
+        <div className="space-y-3 mb-8">
           <Link href="/mecanico"
             className="flex items-center gap-4 bg-steel-800 border border-steel-600 hover:border-brand rounded-xl p-5 text-left transition-all group">
             <span className="text-3xl">🔧</span>
-            <div>
+            <div className="flex-1">
               <p className="text-white font-bold group-hover:text-brand transition-colors">Panel Mecánico</p>
-              <p className="text-gray-500 text-sm">Órdenes activas, cronómetro y checklist</p>
+              <p className="text-gray-500 text-sm">Órdenes activas · cronómetro · checklist</p>
             </div>
-            <span className="ml-auto text-gray-600 group-hover:text-brand transition-colors">→</span>
+            <span className="text-gray-600 group-hover:text-brand transition-colors text-lg">→</span>
           </Link>
 
           <Link href="/admin"
             className="flex items-center gap-4 bg-steel-800 border border-steel-600 hover:border-brand rounded-xl p-5 text-left transition-all group">
             <span className="text-3xl">⚙️</span>
-            <div>
+            <div className="flex-1">
               <p className="text-white font-bold group-hover:text-brand transition-colors">Backoffice Admin</p>
-              <p className="text-gray-500 text-sm">Órdenes, finanzas, score del taller</p>
+              <p className="text-gray-500 text-sm">Órdenes · finanzas · score del taller</p>
             </div>
-            <span className="ml-auto text-gray-600 group-hover:text-brand transition-colors">→</span>
+            <span className="text-gray-600 group-hover:text-brand transition-colors text-lg">→</span>
           </Link>
 
-          <a href="/" target="_blank"
+          <a href="/index.html"
             className="flex items-center gap-4 bg-steel-800 border border-steel-600 hover:border-brand rounded-xl p-5 text-left transition-all group">
             <span className="text-3xl">🌐</span>
-            <div>
+            <div className="flex-1">
               <p className="text-white font-bold group-hover:text-brand transition-colors">Portal del Cliente</p>
-              <p className="text-gray-500 text-sm">Reserva de turnos (index.html)</p>
+              <p className="text-gray-500 text-sm">Reserva de turnos online</p>
             </div>
-            <span className="ml-auto text-gray-600 group-hover:text-brand transition-colors">→</span>
+            <span className="text-gray-600 group-hover:text-brand transition-colors text-lg">→</span>
           </a>
         </div>
 
         {/* PDFs de demo */}
-        <div className="mt-8 pt-6 border-t border-steel-700">
-          <p className="text-gray-600 text-xs uppercase tracking-wider mb-3">PDFs de ejemplo (con datos seed)</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            <a href="/api/pdf/work-order/demo" target="_blank"
-              className="text-xs bg-brand/10 text-brand border border-brand/30 rounded-lg px-3 py-2 hover:bg-brand/20 transition-colors">
-              📄 Informe técnico
-            </a>
-            <a href="/api/pdf/checkin/demo" target="_blank"
-              className="text-xs bg-steel-700 text-gray-300 border border-steel-600 rounded-lg px-3 py-2 hover:border-brand transition-colors">
-              📄 Remito recepción
-            </a>
-            <a href="/api/pdf/monthly/demo/2026-06" target="_blank"
-              className="text-xs bg-steel-700 text-gray-300 border border-steel-600 rounded-lg px-3 py-2 hover:border-brand transition-colors">
-              📄 Reporte mensual
-            </a>
+        <div className="border-t border-steel-700 pt-6">
+          <p className="text-gray-600 text-xs uppercase tracking-wider mb-3 text-center">PDFs generados con datos reales</p>
+          <div className="grid grid-cols-2 gap-2">
+            {completedWO && (
+              <>
+                <a href={`/api/pdf/work-order/${completedWO.id}`} target="_blank"
+                  className="flex items-center gap-2 bg-brand/10 text-brand border border-brand/30 rounded-lg px-3 py-2.5 hover:bg-brand/20 transition-colors text-xs font-bold">
+                  <span>📄</span> Informe técnico
+                </a>
+                <a href={`/api/pdf/checkin/${completedWO.id}`} target="_blank"
+                  className="flex items-center gap-2 bg-steel-800 text-gray-300 border border-steel-600 rounded-lg px-3 py-2.5 hover:border-brand transition-colors text-xs">
+                  <span>📄</span> Remito recepción
+                </a>
+                <a href={`/api/pdf/quote/${completedWO.id}`} target="_blank"
+                  className="flex items-center gap-2 bg-steel-800 text-gray-300 border border-steel-600 rounded-lg px-3 py-2.5 hover:border-brand transition-colors text-xs">
+                  <span>📄</span> Presupuesto
+                </a>
+              </>
+            )}
+            {workshop && (
+              <a href={`/api/pdf/monthly/${workshop.id}/${monthStr}`} target="_blank"
+                className="flex items-center gap-2 bg-steel-800 text-gray-300 border border-steel-600 rounded-lg px-3 py-2.5 hover:border-brand transition-colors text-xs">
+                <span>📄</span> Reporte mensual
+              </a>
+            )}
           </div>
+          {!completedWO && (
+            <p className="text-gray-700 text-xs text-center mt-2">Ejecutá npm run db:seed para cargar datos demo</p>
+          )}
         </div>
 
-        <p className="text-gray-700 text-xs mt-8">
-          Express Service Alpha v2.0 · {new Date().getFullYear()}
-        </p>
+        <p className="text-gray-800 text-xs text-center mt-6">Express Service Alpha v2.0 · {now.getFullYear()}</p>
       </div>
     </div>
   )
