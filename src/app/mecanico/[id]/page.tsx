@@ -18,7 +18,7 @@ export default async function MecanicoOrderPage({ params }: { params: { id: stri
       vehicle:    true,
       workshop:   true,
       checklist:  true,
-      orderItems: { orderBy: { createdAt: 'asc' } },
+      orderItems: { orderBy: { sortOrder: 'asc' } },
     },
   })
   if (!wo) notFound()

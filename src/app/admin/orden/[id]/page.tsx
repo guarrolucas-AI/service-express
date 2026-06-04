@@ -20,7 +20,7 @@ export default async function AdminOrderPage({ params }: { params: { id: string 
       vehicle:    true,
       workshop:   true,
       checklist:  true,
-      orderItems: { orderBy: { createdAt: 'asc' } },
+      orderItems: { orderBy: { sortOrder: 'asc' } },
       appointment: true,
     },
   })
