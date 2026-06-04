@@ -42,20 +42,16 @@ export class ConflictError extends AppError {
   }
 }
 
-// Contexto genérico de Next.js App Router (params para rutas dinámicas)
-type RouteContext = { params: Record<string, string> }
-
-type RouteHandler = (
-  req: NextRequest,
-  ctx?: RouteContext,
-) => Promise<NextResponse | Response>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type RouteHandler = (req: NextRequest, ctx?: any) => Promise<NextResponse | Response>
 
 /**
  * Envuelve un route handler de Next.js para captura uniforme de errores.
  * Compatible con rutas simples y rutas con parámetros dinámicos [id].
  */
 export function withErrorHandler(handler: RouteHandler): RouteHandler {
-  return async (req: NextRequest, ctx?: RouteContext) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return async (req: NextRequest, ctx?: any) => {
     try {
       return await handler(req, ctx)
     } catch (err) {
