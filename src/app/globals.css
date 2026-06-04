@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --font-barlow: 'Barlow Condensed', sans-serif;
+  --font-inter:  'Inter', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: #0C0C0E;
+  color: #F5F5F5;
+  font-family: var(--font-inter);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Status badges */
+.badge-pending    { @apply bg-yellow-500/15 text-yellow-400 border border-yellow-500/30; }
+.badge-progress   { @apply bg-blue-500/15   text-blue-400   border border-blue-500/30; }
+.badge-quality    { @apply bg-purple-500/15 text-purple-400 border border-purple-500/30; }
+.badge-completed  { @apply bg-green-500/15  text-green-400  border border-green-500/30; }
+.badge-cancelled  { @apply bg-red-500/15    text-red-400    border border-red-500/30; }

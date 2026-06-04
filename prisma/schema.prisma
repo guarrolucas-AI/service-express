@@ -1,0 +1,417 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  CLIENT
+  ADMIN
+  MECHANIC
+}
+
+enum WorkshopStatus {
+  PENDING_AUDIT
+  ACTIVE
+  SUSPENDED
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum WorkOrderStatus {
+  PENDING_QUOTE        // Sin repuesto mapeado — espera cotización manual
+  PENDING_PART         // Repuesto confirmado, pendiente de stock
+  READY_FOR_APPOINTMENT // Stock reservado, turno confirmado
+  VEHICLE_RECEIVED     // Check-in realizado
+  IN_PROGRESS          // Mecánico trabajando
+  QUALITY_CONTROL      // Último item completado, checklist en curso
+  COMPLETED            // Orden cerrada
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  SKIPPED
+}
+
+enum SemaphoreStatus {
+  GREEN   // OK
+  YELLOW  // Atención
+  RED     // Crítico
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REFUNDED
+}
+
+// ─────────────────────────────────────────────
+// USERS
+// ─────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  phone         String?
+  firstName     String
+  lastName      String
+  role          UserRole  @default(CLIENT)
+  passwordHash  String?
+  avatarUrl     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  vehicles      Vehicle[]
+  appointments  Appointment[]
+  workOrders    WorkOrder[]
+
+  @@index([email])
+  @@index([phone])
+}
+
+// ─────────────────────────────────────────────
+// WORKSHOPS
+// ─────────────────────────────────────────────
+
+model Workshop {
+  id              String         @id @default(cuid())
+  name            String
+  address         String
+  city            String
+  province        String         @default("Buenos Aires")
+  lat             Float
+  lng             Float
+  phone           String
+  email           String         @unique
+  cuit            String?
+  status          WorkshopStatus @default(PENDING_AUDIT)
+
+  // MercadoPago OAuth — el taller vincula su cuenta una vez
+  mpAccessToken   String?        // access_token del taller (OAuth)
+  mpRefreshToken  String?
+  mpAccountId     String?        // collector_id del taller
+  mpTokenExpiry   DateTime?
+
+  // Score dinámico (algoritmo Uber)
+  score           Float          @default(5.0)
+  timeDeviationPct Float         @default(0)   // % desviación promedio de tiempos
+  npsAverage      Float          @default(0)   // 0–10
+  rejectionRate   Float          @default(0)   // 0.0–1.0
+  totalServices   Int            @default(0)
+  totalRejections Int            @default(0)
+  isActive        Boolean        @default(true)
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  appointments    Appointment[]
+  workOrders      WorkOrder[]
+  scoreHistory    WorkshopScoreHistory[]
+
+  @@index([lat, lng])
+  @@index([score])
+  @@index([status])
+}
+
+model WorkshopScoreHistory {
+  id          String   @id @default(cuid())
+  workshopId  String
+  score       Float
+  reason      String?
+  createdAt   DateTime @default(now())
+
+  workshop    Workshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+
+  @@index([workshopId])
+}
+
+// ─────────────────────────────────────────────
+// VEHICLES
+// ─────────────────────────────────────────────
+
+model Vehicle {
+  id          String   @id @default(cuid())
+  userId      String
+  plate       String   @unique
+  brand       String
+  model       String
+  year        Int
+  engine      String                // ej: "2.0 TDI"
+  currentKm   Int
+  vin         String?
+  color       String?
+  fuelType    String?               // GASOLINE | DIESEL | ELECTRIC | HYBRID
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user                   User                   @relation(fields: [userId], references: [id])
+  appointments           Appointment[]
+  workOrders             WorkOrder[]
+  maintenanceRecords     PredictiveMaintenance[]
+
+  @@index([userId])
+  @@index([plate])
+  @@index([brand, model, year])
+}
+
+// ─────────────────────────────────────────────
+// SPARE PARTS
+// ─────────────────────────────────────────────
+
+model SparePart {
+  id            String   @id @default(cuid())
+  sku           String   @unique
+  name          String
+  description   String?
+  partNumber    String?
+  brand         String?
+  category      String   // BRAKES | SUSPENSION | ENGINE | TIRES | FLUIDS | FILTERS | etc.
+  stock         Int      @default(0)
+  costPrice     Decimal  @db.Decimal(12, 2)
+  salePrice     Decimal  @db.Decimal(12, 2)
+  // JSON: [{ brand, model, yearFrom, yearTo, engine }]
+  compatibility Json     @default("[]")
+  imageUrl      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orderItems    OrderItem[]
+
+  @@index([sku])
+  @@index([category])
+  @@index([stock])
+}
+
+// ─────────────────────────────────────────────
+// APPOINTMENTS
+// ─────────────────────────────────────────────
+
+model Appointment {
+  id            String            @id @default(cuid())
+  userId        String
+  workshopId    String
+  vehicleId     String
+  scheduledAt   DateTime
+  durationMin   Int               // minutos estimados totales
+  status        AppointmentStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id])
+  workshop      Workshop          @relation(fields: [workshopId], references: [id])
+  vehicle       Vehicle           @relation(fields: [vehicleId], references: [id])
+  workOrder     WorkOrder?
+
+  @@index([userId])
+  @@index([workshopId])
+  @@index([scheduledAt])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────
+// WORK ORDERS
+// ─────────────────────────────────────────────
+
+model WorkOrder {
+  id              String          @id @default(cuid())
+  appointmentId   String          @unique
+  userId          String
+  vehicleId       String
+  workshopId      String
+  status          WorkOrderStatus @default(PENDING_QUOTE)
+
+  // Financiero
+  mpPreferenceId  String?
+  mpPaymentId     String?
+  paymentStatus   PaymentStatus   @default(PENDING)
+  totalAmount     Decimal?        @db.Decimal(12, 2)
+  partsAmount     Decimal?        @db.Decimal(12, 2)
+  laborAmount     Decimal?        @db.Decimal(12, 2)
+  platformFee     Decimal?        @db.Decimal(12, 2)
+  workshopPayout  Decimal?        @db.Decimal(12, 2)
+  paidAt          DateTime?
+
+  // Check-in (3 fotos obligatorias)
+  checkInAt              DateTime?
+  checkInKm              Int?
+  checkInPhotoFront      String?
+  checkInPhotoRear       String?
+  checkInPhotoOdometer   String?
+
+  // Cierre
+  completedAt     DateTime?
+  reportUrl       String?
+
+  // NPS post-servicio
+  npsScore        Int?             // 0–10
+  npsComment      String?
+  npsRespondedAt  DateTime?
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  appointment     Appointment     @relation(fields: [appointmentId], references: [id])
+  user            User            @relation(fields: [userId], references: [id])
+  vehicle         Vehicle         @relation(fields: [vehicleId], references: [id])
+  workshop        Workshop        @relation(fields: [workshopId], references: [id])
+  orderItems      OrderItem[]
+  checklist       InspectionChecklist?
+
+  @@index([userId])
+  @@index([workshopId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([mpPaymentId])
+}
+
+// ─────────────────────────────────────────────
+// ORDER ITEMS (tareas atómicas)
+// ─────────────────────────────────────────────
+
+model OrderItem {
+  id               String     @id @default(cuid())
+  workOrderId      String
+  sparePartId      String?
+  taskName         String
+  taskType         String     // LABOR | PART
+  estimatedMinutes Int?
+  realMinutes      Int?
+  startedAt        DateTime?
+  finishedAt       DateTime?
+  status           TaskStatus @default(PENDING)
+  laborPrice       Decimal?   @db.Decimal(12, 2)
+  partPrice        Decimal?   @db.Decimal(12, 2)
+  quantity         Int        @default(1)
+  sortOrder        Int        @default(0)
+  notes            String?
+  mechanicUserId   String?    // FK al mecánico que realizó la tarea
+
+  workOrder        WorkOrder  @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  sparePart        SparePart? @relation(fields: [sparePartId], references: [id])
+
+  @@index([workOrderId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────
+// INSPECTION CHECKLIST
+// ─────────────────────────────────────────────
+
+model InspectionChecklist {
+  id                    String          @id @default(cuid())
+  workOrderId           String          @unique
+
+  // Frenos
+  frontBrakePadPct      Int             // 0–100 % de vida útil
+  rearBrakePadPct       Int
+  brakeFluidStatus      SemaphoreStatus
+
+  // Amortiguación
+  frontShockStatus      SemaphoreStatus
+  rearShockStatus       SemaphoreStatus
+
+  // Fluidos
+  oilStatus             SemaphoreStatus
+  coolantStatus         SemaphoreStatus
+  transmissionStatus    SemaphoreStatus
+
+  // Neumáticos (mm de dibujo — legal mín 1.6mm, crítico <2mm)
+  tireFrontLeftMm       Float
+  tireFrontRightMm      Float
+  tireRearLeftMm        Float
+  tireRearRightMm       Float
+  tirePressureStatus    SemaphoreStatus
+
+  mechanicNotes         String?
+  completedAt           DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  workOrder             WorkOrder       @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+}
+
+// ─────────────────────────────────────────────
+// PREDICTIVE MAINTENANCE
+// ─────────────────────────────────────────────
+
+model PredictiveMaintenance {
+  id                    String   @id @default(cuid())
+  vehicleId             String
+  workOrderId           String?  // orden que generó el registro
+  component             String   // BRAKE_PAD_FRONT | BRAKE_PAD_REAR | TIRE_FL | TIRE_FR | TIRE_RL | TIRE_RR | OIL | etc.
+  currentValuePct       Float?   // % vida restante
+  currentValueMm        Float?   // mm restantes
+  criticalThresholdPct  Float?   // límite crítico en %
+  criticalThresholdMm   Float?   // límite crítico en mm
+  baseKm                Int      // km en el momento de medición
+  monthlyKmAvg          Int      @default(1200)
+  projectedCriticalKm   Int      // km proyectado al límite
+  projectedCriticalDate DateTime // fecha calculada del límite
+  alertSentAt           DateTime?
+  resolved              Boolean  @default(false)
+  resolvedAt            DateTime?
+  createdAt             DateTime @default(now())
+
+  vehicle               Vehicle  @relation(fields: [vehicleId], references: [id])
+
+  @@index([vehicleId])
+  @@index([projectedCriticalDate])
+  @@index([alertSentAt])
+  @@index([resolved])
+}
+
+// ─────────────────────────────────────────────
+// ML: TASK TIME BASELINE (aprendizaje mensual)
+// ─────────────────────────────────────────────
+
+model TaskTimeBaseline {
+  id               String   @id @default(cuid())
+  taskName         String
+  vehicleBrand     String   @default("*")
+  vehicleModel     String   @default("*")
+  estimatedMinutes Int
+  sampleCount      Int      @default(0)
+  avgRealMinutes   Float?
+  lastUpdatedAt    DateTime @default(now())
+
+  @@unique([taskName, vehicleBrand, vehicleModel])
+  @@index([taskName])
+}
+
+// ─────────────────────────────────────────────
+// WHATSAPP CAMPAIGNS (para retención predictiva)
+// ─────────────────────────────────────────────
+
+model WhatsappCampaign {
+  id                String   @id @default(cuid())
+  vehicleId         String?
+  userId            String?
+  maintenanceId     String?
+  templateName      String
+  phone             String
+  scheduledAt       DateTime
+  sentAt            DateTime?
+  status            String   @default("SCHEDULED") // SCHEDULED | SENT | FAILED
+  payload           Json?    // parámetros del template
+  createdAt         DateTime @default(now())
+
+  @@index([scheduledAt])
+  @@index([status])
+}
