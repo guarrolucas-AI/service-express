@@ -1,8 +1,9 @@
 /**
- * GET /api/pdf/test
- * Diagnóstico: import dinámico para capturar el error exacto.
+ * GET /api/pdf/test  — verifica que pdfkit funciona en Vercel.
  */
 import { NextResponse } from 'next/server'
+import PDFDocument from 'pdfkit'
+import { docToBuffer } from '@/lib/pdf/pdfkit-utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -10,26 +11,23 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const start = Date.now()
   try {
-    // Import dinámico para que cualquier fallo de módulo sea capturado aquí
-    const reactPdf = await import('@react-pdf/renderer')
-    const React    = await import('react')
+    const doc = new PDFDocument({ margin: 40, size: 'A4' })
+    const bufPromise = docToBuffer(doc)
 
-    const { renderToBuffer, Document, Page, Text, View } = reactPdf
+    doc.rect(0, 0, doc.page.width, doc.page.height).fill('#0C0C0E')
+    doc.font('Helvetica-Bold').fontSize(28).fillColor('#E8C547')
+       .text('EXPRESS SERVICE', 40, 60)
+    doc.font('Helvetica').fontSize(14).fillColor('#F5F5F5')
+       .text('PDF generado con pdfkit ✓', 40, 110)
+    doc.font('Helvetica').fontSize(10).fillColor('#A0A0AA')
+       .text(`Fecha: ${new Date().toISOString()}`, 40, 140)
+    doc.font('Helvetica').fontSize(10).fillColor('#606068')
+       .text('Si ves este PDF, el generador funciona correctamente en Vercel.', 40, 165)
+    doc.end()
 
-    const doc = React.default.createElement(
-      Document, {},
-      React.default.createElement(
-        Page, { size: 'A4', style: { padding: 40 } },
-        React.default.createElement(View, {},
-          React.default.createElement(Text, { style: { fontSize: 18 } }, 'Express Service — PDF test OK'),
-          React.default.createElement(Text, { style: { fontSize: 10, marginTop: 8 } }, new Date().toISOString()),
-        ),
-      ),
-    )
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const buffer = await renderToBuffer(doc as any)
+    const buffer = await bufPromise
     const ms = Date.now() - start
+    console.log(`[pdf/test] OK — ${buffer.length} bytes en ${ms}ms`)
 
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
@@ -39,13 +37,7 @@ export async function GET() {
       },
     })
   } catch (err) {
-    const ms = Date.now() - start
-    console.error('[pdf/test] CRASH:', err)
-    return NextResponse.json({
-      ok:     false,
-      ms,
-      error:  String(err),
-      stack:  err instanceof Error ? err.stack?.split('\n').slice(0, 8).join('\n') : undefined,
-    }, { status: 500 })
+    console.error('[pdf/test] ERROR:', err)
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
   }
 }

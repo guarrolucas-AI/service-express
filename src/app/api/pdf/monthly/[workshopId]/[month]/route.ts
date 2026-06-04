@@ -2,14 +2,12 @@
  * GET /api/pdf/monthly/[workshopId]/[month]
  * Reporte mensual del taller. month = "YYYY-MM"
  */
-
 import { NextRequest, NextResponse } from 'next/server'
-import { renderToBuffer } from '@react-pdf/renderer'
-import type { DocumentProps } from '@react-pdf/renderer'
-import React from 'react'
-import { prisma } from '@/lib/db'
-import { MonthlyReportPDF } from '@/lib/pdf/monthly-report'
+import PDFDocument from 'pdfkit'
 import { startOfMonth, endOfMonth, eachWeekOfInterval, format } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { prisma } from '@/lib/db'
+import { C, docToBuffer, fillBg, hr, sectionTitle, drawTable, fmt } from '@/lib/pdf/pdfkit-utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,13 +18,11 @@ export async function GET(
 ) {
   try {
     const [year, mon] = params.month.split('-').map(Number)
-    const monthStart = startOfMonth(new Date(year, mon - 1, 1))
-    const monthEnd   = endOfMonth(monthStart)
+    const monthStart  = startOfMonth(new Date(year, mon - 1, 1))
+    const monthEnd    = endOfMonth(monthStart)
 
     const workshop = await prisma.workshop.findUnique({ where: { id: params.workshopId } })
-    if (!workshop) {
-      return NextResponse.json({ error: 'Taller no encontrado' }, { status: 404 })
-    }
+    if (!workshop) return NextResponse.json({ error: 'Taller no encontrado' }, { status: 404 })
 
     const orders = await prisma.workOrder.findMany({
       where: {
@@ -36,18 +32,16 @@ export async function GET(
       include: { orderItems: true },
     })
 
-    const completed  = orders.filter(o => o.status === 'COMPLETED')
-    const cancelled  = orders.filter(o => o.status !== 'COMPLETED')
-    const totalRev   = completed.reduce((s, o) => s + Number(o.totalAmount ?? 0), 0)
-    const laborRev   = completed.reduce((s, o) => s + Number(o.laborAmount ?? 0), 0)
-    const partsRev   = completed.reduce((s, o) => s + Number(o.partsAmount ?? 0), 0)
+    const completed = orders.filter(o => o.status === 'COMPLETED')
+    const other     = orders.filter(o => o.status !== 'COMPLETED')
+    const totalRev  = completed.reduce((s, o) => s + Number(o.totalAmount ?? 0), 0)
+    const laborRev  = completed.reduce((s, o) => s + Number(o.laborAmount ?? 0), 0)
+    const partsRev  = completed.reduce((s, o) => s + Number(o.partsAmount ?? 0), 0)
 
     const npsOrders = completed.filter(o => o.npsScore !== null)
     const npsAvg    = npsOrders.length > 0
       ? npsOrders.reduce((s, o) => s + (o.npsScore ?? 0), 0) / npsOrders.length
       : 0
-    const npsDist = Array(11).fill(0)
-    npsOrders.forEach(o => { if (o.npsScore !== null) npsDist[o.npsScore]++ })
 
     const svcMap: Record<string, { count: number; revenue: number }> = {}
     for (const o of completed) {
@@ -71,40 +65,119 @@ export async function GET(
       return { week: `Sem. ${i + 1} (${format(weekStart, 'd/MM')})`, amount: amt }
     })
 
-    const items = completed.flatMap(o => o.orderItems).filter(i => i.realMinutes && i.estimatedMinutes)
-    const avgDev = items.length > 0
-      ? items.reduce((s, i) => s + Math.abs((i.realMinutes! - i.estimatedMinutes!) / i.estimatedMinutes! * 100), 0) / items.length
-      : 0
+    const monthLabel = format(monthStart, 'yyyy-MM')
 
-    const data = {
-      workshopName:        workshop.name,
-      workshopAddress:     workshop.address,
-      month:               monthStart,
-      generatedAt:         new Date(),
-      totalOrders:         orders.length,
-      completedOrders:     completed.length,
-      cancelledOrders:     cancelled.length,
-      totalRevenue:        totalRev,
-      laborRevenue:        laborRev,
-      partsRevenue:        partsRev,
-      avgCompletionHours:  0,
-      avgTimeDeviationPct: Math.round(avgDev),
-      npsAverage:          npsAvg,
-      npsCount:            npsOrders.length,
-      npsDistribution:     npsDist,
-      currentScore:        Math.round(workshop.score),
-      prevScore:           Math.round(workshop.score - 2),
-      topServices:         topSvcs,
-      weeklyRevenue,
+    const doc = new PDFDocument({ margin: 40, size: 'A4' })
+    const bufPromise = docToBuffer(doc)
+    fillBg(doc)
+    doc.on('pageAdded', () => fillBg(doc))
+
+    // ── Header ────────────────────────────────────────────────────────────────
+    doc.font('Helvetica-Bold').fontSize(26).fillColor(C.brand).text('EXPRESS SERVICE', 40, 50)
+    doc.font('Helvetica').fontSize(9).fillColor(C.t3).text('REPORTE MENSUAL', 40, 82, { characterSpacing: 2 })
+    doc.font('Helvetica-Bold').fontSize(18).fillColor(C.t1)
+       .text(format(monthStart, 'MMMM yyyy', { locale: es }).toUpperCase(), 40, 94)
+
+    doc.font('Helvetica').fontSize(8).fillColor(C.t3)
+       .text(`Generado: ${format(new Date(), "d 'de' MMMM yyyy", { locale: es })}`,
+             350, 60, { align: 'right', width: 165 })
+    doc.font('Helvetica').fontSize(8).fillColor(C.t2)
+       .text(workshop.name,    350, 74, { align: 'right', width: 165 })
+       .text(workshop.address, 350, 86, { align: 'right', width: 165 })
+
+    doc.y = 140
+    hr(doc)
+
+    // ── KPIs ──────────────────────────────────────────────────────────────────
+    sectionTitle(doc, 'Resumen Ejecutivo')
+
+    const kpiY = doc.y
+    const kpiW = 120
+    const kpis = [
+      { label: 'Órdenes totales', value: String(orders.length),    color: C.t1    },
+      { label: 'Completadas',     value: String(completed.length), color: C.green },
+      { label: 'En proceso/otras', value: String(other.length),    color: C.t3    },
+      { label: 'Revenue total',   value: fmt(totalRev),            color: C.brand },
+    ]
+    kpis.forEach(({ label, value, color }, i) => {
+      const x = 40 + i * (kpiW + 6)
+      doc.save().rect(x, kpiY, kpiW, 52).fill(C.card).restore()
+      doc.font('Helvetica').fontSize(7).fillColor(C.t3)
+         .text(label, x + 8, kpiY + 8, { width: kpiW - 16 })
+      doc.font('Helvetica-Bold').fontSize(15).fillColor(color)
+         .text(value, x + 8, kpiY + 22, { width: kpiW - 16 })
+    })
+    doc.y = kpiY + 62
+
+    // ── Desglose ingresos ─────────────────────────────────────────────────────
+    doc.moveDown(0.5)
+    const revY = doc.y
+    doc.save().rect(40, revY, 255, 38).fill(C.card).restore()
+    doc.font('Helvetica').fontSize(8).fillColor(C.t2)
+       .text('Mano de obra:', 50, revY + 8, { width: 110, lineBreak: false })
+    doc.font('Helvetica-Bold').fillColor(C.t1)
+       .text(fmt(laborRev), 50, revY + 8, { width: 235, align: 'right', lineBreak: false })
+    doc.font('Helvetica').fontSize(8).fillColor(C.t2)
+       .text('Repuestos:', 50, revY + 22, { width: 110, lineBreak: false })
+    doc.font('Helvetica-Bold').fillColor(C.t1)
+       .text(fmt(partsRev), 50, revY + 22, { width: 235, align: 'right', lineBreak: false })
+    doc.y = revY + 46
+
+    // ── NPS ───────────────────────────────────────────────────────────────────
+    if (npsOrders.length > 0) {
+      doc.moveDown(0.5)
+      hr(doc)
+      sectionTitle(doc, 'Satisfacción del Cliente (NPS)')
+      const npsY = doc.y
+      doc.save().rect(40, npsY, 155, 52).fill(C.card).restore()
+      doc.font('Helvetica').fontSize(7).fillColor(C.t3)
+         .text('NPS PROMEDIO', 50, npsY + 8)
+      doc.font('Helvetica-Bold').fontSize(28).fillColor(C.brand)
+         .text(npsAvg.toFixed(1), 50, npsY + 18)
+      doc.font('Helvetica').fontSize(7).fillColor(C.t3)
+         .text(`sobre ${npsOrders.length} respuestas`, 50, npsY + 43)
+      doc.y = npsY + 62
     }
 
-    console.log('[pdf/monthly] Iniciando renderToBuffer...')
-    const buffer = await renderToBuffer(
-      React.createElement(MonthlyReportPDF, { d: data }) as React.ReactElement<DocumentProps>,
-    )
-    console.log('[pdf/monthly] Buffer generado, tamaño:', buffer.length)
+    // ── Top servicios ─────────────────────────────────────────────────────────
+    if (topSvcs.length > 0) {
+      doc.moveDown(0.5)
+      hr(doc)
+      sectionTitle(doc, 'Top Servicios')
+      drawTable(doc, [
+        { header: 'Servicio', width: 315 },
+        { header: 'Cantidad', width: 80,  align: 'center' },
+        { header: 'Revenue',  width: 120, align: 'right'  },
+      ], topSvcs.map(s => [
+        s.name,
+        { text: String(s.count), align: 'center' } as { text: string },
+        { text: fmt(s.revenue),  align: 'right', bold: true } as { text: string; bold: boolean },
+      ]))
+    }
 
-    const monthLabel = format(monthStart, 'yyyy-MM')
+    // ── Revenue semanal ───────────────────────────────────────────────────────
+    if (weeklyRevenue.length > 0) {
+      doc.moveDown(0.5)
+      hr(doc)
+      sectionTitle(doc, 'Revenue por Semana')
+      drawTable(doc, [
+        { header: 'Semana',  width: 250 },
+        { header: 'Revenue', width: 265, align: 'right' },
+      ], weeklyRevenue.map(w => [
+        w.week,
+        { text: fmt(w.amount), align: 'right', bold: true } as { text: string; bold: boolean },
+      ]))
+    }
+
+    // ── Score taller ──────────────────────────────────────────────────────────
+    doc.moveDown(1)
+    hr(doc)
+    doc.font('Helvetica').fontSize(8).fillColor(C.t3)
+       .text(`Score del taller: ${Math.round(workshop.score)} / 100  ·  ${format(monthStart, 'MMMM yyyy', { locale: es })}`)
+
+    doc.end()
+    const buffer = await bufPromise
+
     return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
         'Content-Type':        'application/pdf',
@@ -113,9 +186,6 @@ export async function GET(
     })
   } catch (err) {
     console.error('[pdf/monthly] Error:', err)
-    return NextResponse.json(
-      { error: 'Error generando PDF', detail: String(err) },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: 'Error generando PDF', detail: String(err) }, { status: 500 })
   }
 }

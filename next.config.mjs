@@ -5,24 +5,8 @@ const nextConfig = {
     // En Next.js 14.x la clave correcta es serverComponentsExternalPackages (no serverExternalPackages).
     serverComponentsExternalPackages: [
       '@prisma/client',
-      '@react-pdf/renderer',
-      '@react-pdf/layout',
-      '@react-pdf/font',
-      '@react-pdf/pdfkit',
-      '@react-pdf/png-js',
-      'yoga-layout',
-      'fontkit',
-      'canvas',
+      'pdfkit',
     ],
-
-    // yoga-layout carga sus binarios con require() de path relativo.
-    // Vercel no los detecta con file-tracing automático → hay que declararlos.
-    outputFileTracingIncludes: {
-      '/api/pdf/**': [
-        './node_modules/yoga-layout/binaries/**',
-        './node_modules/yoga-layout/src/**',
-      ],
-    },
   },
 
   images: {
