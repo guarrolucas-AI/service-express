@@ -41,7 +41,6 @@ async function main() {
       lastName:   'Fernández',
       role:       'ADMIN',
       phone:      '1166614164',
-      workshopId: workshop.id,
     },
   })
 
@@ -55,7 +54,6 @@ async function main() {
       lastName:   'Gómez',
       role:       'MECHANIC',
       phone:      '1155223344',
-      workshopId: workshop.id,
     },
   })
 
@@ -126,7 +124,7 @@ async function main() {
     update: {},
     create: {
       sku: 'FRENO-GOL-DEL-01', name: 'Kit Pastillas Freno Delanteras Gol Trend',
-      brand: 'Bosch', costPrice: 8_500, salePrice: 14_200, stock: 6,
+      brand: 'Bosch', category: 'BRAKES', costPrice: 8_500, salePrice: 14_200, stock: 6,
       compatibility: [{ brand: 'Volkswagen', model: 'Gol Trend', yearFrom: 2012, yearTo: 2024 }],
     },
   })
@@ -135,7 +133,7 @@ async function main() {
     update: {},
     create: {
       sku: 'ACEITE-5W40-01', name: 'Aceite Motor 5W40 Sintético (4L)',
-      brand: 'Castrol', costPrice: 6_200, salePrice: 9_800, stock: 20,
+      brand: 'Castrol', category: 'FLUIDS', costPrice: 6_200, salePrice: 9_800, stock: 20,
       compatibility: [],
     },
   })
@@ -144,7 +142,7 @@ async function main() {
     update: {},
     create: {
       sku: 'FILTRO-ACEITE-01', name: 'Filtro de Aceite',
-      brand: 'Mann', costPrice: 1_200, salePrice: 2_400, stock: 15,
+      brand: 'Mann', category: 'FILTERS', costPrice: 1_200, salePrice: 2_400, stock: 15,
       compatibility: [],
     },
   })
