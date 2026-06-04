@@ -1,7 +1,9 @@
 /**
- * GET /api/pdf/test  — diagnóstico: dynamic import para capturar el error real.
+ * GET /api/pdf/test  — verifica que pdfkit funciona en Vercel.
  */
 import { NextResponse } from 'next/server'
+import PDFDocument from 'pdfkit'
+import { docToBuffer } from '@/lib/pdf/pdfkit-utils'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -9,11 +11,6 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const start = Date.now()
   try {
-    // Dynamic import para que el fallo sea catcheable (no HTML 500)
-    const PDFDocumentModule = await import('pdfkit')
-    const PDFDocument = PDFDocumentModule.default
-    const { docToBuffer } = await import('@/lib/pdf/pdfkit-utils')
-
     const doc = new PDFDocument({ margin: 40, size: 'A4' })
     const bufPromise = docToBuffer(doc)
 
@@ -24,6 +21,8 @@ export async function GET() {
        .text('PDF generado con pdfkit ✓', 40, 110)
     doc.font('Helvetica').fontSize(10).fillColor('#A0A0AA')
        .text(`Fecha: ${new Date().toISOString()}`, 40, 140)
+    doc.font('Helvetica').fontSize(10).fillColor('#606068')
+       .text('Si ves este PDF, el generador funciona correctamente en Vercel.', 40, 165)
     doc.end()
 
     const buffer = await bufPromise
@@ -38,10 +37,7 @@ export async function GET() {
       },
     })
   } catch (err) {
-    const detail = err instanceof Error
-      ? { message: err.message, stack: err.stack, name: err.name }
-      : String(err)
-    console.error('[pdf/test] ERROR:', detail)
-    return NextResponse.json({ ok: false, error: detail }, { status: 500 })
+    console.error('[pdf/test] ERROR:', err)
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
   }
 }
