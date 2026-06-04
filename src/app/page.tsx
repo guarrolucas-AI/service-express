@@ -75,15 +75,15 @@ export default async function HomePage() {
             <span className="text-gray-600 group-hover:text-brand transition-colors text-lg">→</span>
           </Link>
 
-          <a href="/index.html"
+          <Link href="/cliente"
             className="flex items-center gap-4 bg-steel-800 border border-steel-600 hover:border-brand rounded-xl p-5 text-left transition-all group">
             <span className="text-3xl">🌐</span>
             <div className="flex-1">
               <p className="text-white font-bold group-hover:text-brand transition-colors">Portal del Cliente</p>
-              <p className="text-gray-500 text-sm">Reserva de turnos online</p>
+              <p className="text-gray-500 text-sm">Rastreo de orden · Reserva de turnos</p>
             </div>
             <span className="text-gray-600 group-hover:text-brand transition-colors text-lg">→</span>
-          </a>
+          </Link>
         </div>
 
         {/* PDFs de demo */}

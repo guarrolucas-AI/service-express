@@ -18,6 +18,12 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Input field base */
+.input-field {
+  @apply w-full bg-steel-700 border border-steel-500 rounded-lg px-4 py-3 text-white placeholder-gray-600
+         focus:outline-none focus:border-brand transition-colors;
+}
+
 /* Status badges */
 .badge-pending    { @apply bg-yellow-500/15 text-yellow-400 border border-yellow-500/30; }
 .badge-progress   { @apply bg-blue-500/15   text-blue-400   border border-blue-500/30; }
