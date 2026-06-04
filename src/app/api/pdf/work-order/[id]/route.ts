@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
+import type { DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 import { prisma } from '@/lib/db'
 import { WorkOrderReportPDF } from '@/lib/pdf/work-order-report'
@@ -74,7 +75,7 @@ export const GET = withErrorHandler(async (
   }
 
   const buffer = await renderToBuffer(
-    React.createElement(WorkOrderReportPDF, { d: data }),
+    React.createElement(WorkOrderReportPDF, { d: data }) as React.ReactElement<DocumentProps>,
   )
 
   return new NextResponse(buffer, {

@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
+import type { DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 import { prisma } from '@/lib/db'
 import { QuotePDF } from '@/lib/pdf/quote'
@@ -45,7 +46,9 @@ export const GET = withErrorHandler(async (
     notes: 'Presupuesto válido por 7 días. Los precios de repuestos pueden variar según disponibilidad de stock. Mano de obra sujeta a diagnóstico definitivo.',
   }
 
-  const buffer = await renderToBuffer(React.createElement(QuotePDF, { d: data }))
+  const buffer = await renderToBuffer(
+    React.createElement(QuotePDF, { d: data }) as React.ReactElement<DocumentProps>,
+  )
 
   return new NextResponse(buffer, {
     headers: {

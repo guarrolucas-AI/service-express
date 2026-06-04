@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { renderToBuffer } from '@react-pdf/renderer'
+import type { DocumentProps } from '@react-pdf/renderer'
 import React from 'react'
 import { prisma } from '@/lib/db'
 import { MonthlyReportPDF } from '@/lib/pdf/monthly-report'
@@ -100,7 +101,9 @@ export const GET = withErrorHandler(async (
     weeklyRevenue,
   }
 
-  const buffer = await renderToBuffer(React.createElement(MonthlyReportPDF, { d: data }))
+  const buffer = await renderToBuffer(
+    React.createElement(MonthlyReportPDF, { d: data }) as React.ReactElement<DocumentProps>,
+  )
   const monthLabel = format(monthStart, 'yyyy-MM')
 
   return new NextResponse(buffer, {

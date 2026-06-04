@@ -1,6 +1,5 @@
-import type { NextConfig } from 'next'
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: [
       '@prisma/client',
@@ -8,7 +7,6 @@ const nextConfig: NextConfig = {
       'canvas',
     ],
   },
-  // Permite cargar imágenes de Unsplash y otras fuentes para los PDFs
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
