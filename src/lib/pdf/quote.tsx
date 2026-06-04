@@ -113,7 +113,7 @@ export function QuotePDF({ d }: { d: QuoteData }) {
               <Text style={[s.c4, s.htext]}>Total</Text>
             </View>
             {d.items.map((item, i) => (
-              <View key={i} style={[s.trow, i % 2 !== 0 && s.trowAlt]}>
+              <View key={i} style={[s.trow, ...(i % 2 !== 0 ? [s.trowAlt] : [])]}>
                 <Text style={[s.c1, { color: C.t1 }]}>{item.description}</Text>
                 <Text style={[s.c2, { color: C.t3 }]}>{item.type === 'LABOR' ? 'M.O.' : 'Repuesto'}</Text>
                 <Text style={[s.c3, { color: C.t2 }]}>{item.quantity}</Text>

@@ -55,7 +55,7 @@ export const GET = withErrorHandler(async (
     React.createElement(CheckinReceiptPDF, { d: data }) as React.ReactElement<DocumentProps>,
   )
 
-  return new NextResponse(buffer, {
+  return new NextResponse(buffer as unknown as BodyInit, {
     headers: {
       'Content-Type':        'application/pdf',
       'Content-Disposition': `inline; filename="recepcion-${data.orderNumber}.pdf"`,

@@ -36,7 +36,7 @@ export const GET = withErrorHandler(async (
   })
 
   const completed  = orders.filter(o => o.status === 'COMPLETED')
-  const cancelled  = orders.filter(o => o.status === 'CANCELLED')
+  const cancelled  = orders.filter(o => o.status !== 'COMPLETED')
   const totalRev   = completed.reduce((s, o) => s + Number(o.totalAmount ?? 0), 0)
   const laborRev   = completed.reduce((s, o) => s + Number(o.laborAmount ?? 0), 0)
   const partsRev   = completed.reduce((s, o) => s + Number(o.partsAmount ?? 0), 0)
@@ -106,7 +106,7 @@ export const GET = withErrorHandler(async (
   )
   const monthLabel = format(monthStart, 'yyyy-MM')
 
-  return new NextResponse(buffer, {
+  return new NextResponse(buffer as unknown as BodyInit, {
     headers: {
       'Content-Type':        'application/pdf',
       'Content-Disposition': `inline; filename="reporte-${monthLabel}-${workshop.name.replace(/\s+/g,'-')}.pdf"`,

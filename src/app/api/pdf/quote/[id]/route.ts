@@ -50,7 +50,7 @@ export const GET = withErrorHandler(async (
     React.createElement(QuotePDF, { d: data }) as React.ReactElement<DocumentProps>,
   )
 
-  return new NextResponse(buffer, {
+  return new NextResponse(buffer as unknown as BodyInit, {
     headers: {
       'Content-Type':        'application/pdf',
       'Content-Disposition': `inline; filename="presupuesto-${data.quoteNumber}.pdf"`,

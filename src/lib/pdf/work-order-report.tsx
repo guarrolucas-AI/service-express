@@ -308,7 +308,7 @@ export function WorkOrderReportPDF({ d }: { d: WorkOrderReportData }) {
                 <Text style={[s.colPrice, s.headText]}>Total</Text>
               </View>
               {laborItems.map((item, i) => (
-                <View key={i} style={[s.tableRow, i % 2 !== 0 && s.tableRowAlt]}>
+                <View key={i} style={[s.tableRow, ...(i % 2 !== 0 ? [s.tableRowAlt] : [])]}>
                   <Text style={s.colTask}>{item.taskName}</Text>
                   <Text style={s.colMin}>{item.realMinutes ?? '—'}</Text>
                   <Text style={s.colMin}>{item.estimatedMinutes}</Text>
@@ -330,7 +330,7 @@ export function WorkOrderReportPDF({ d }: { d: WorkOrderReportData }) {
                 <Text style={[s.colPrice, s.headText]}>Total</Text>
               </View>
               {partItems.map((item, i) => (
-                <View key={i} style={[s.tableRow, i % 2 !== 0 && s.tableRowAlt]}>
+                <View key={i} style={[s.tableRow, ...(i % 2 !== 0 ? [s.tableRowAlt] : [])]}>
                   <Text style={s.colTask}>{item.taskName}</Text>
                   <Text style={s.colMin}>{item.quantity}</Text>
                   <Text style={s.colPrice}>{fmt(item.partPrice * item.quantity)}</Text>

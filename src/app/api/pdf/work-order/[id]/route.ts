@@ -78,7 +78,7 @@ export const GET = withErrorHandler(async (
     React.createElement(WorkOrderReportPDF, { d: data }) as React.ReactElement<DocumentProps>,
   )
 
-  return new NextResponse(buffer, {
+  return new NextResponse(buffer as unknown as BodyInit, {
     headers: {
       'Content-Type':        'application/pdf',
       'Content-Disposition': `inline; filename="informe-OT-${data.orderNumber}.pdf"`,
