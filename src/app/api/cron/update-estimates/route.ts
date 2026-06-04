@@ -107,7 +107,6 @@ async function updateTaskTimeBaselines(): Promise<{
         data: {
           estimatedMinutes: g.avgMinutes,
           sampleCount:      g.sampleCount,
-          updatedAt:        new Date(),
         },
       })
       updated++
