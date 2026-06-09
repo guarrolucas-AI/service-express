@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Express Service — Panel Interno',
-  description: 'Sistema de gestión de órdenes de trabajo',
+  title: 'Express Service — Taller Mecánico',
+  description: 'Reservá tu turno online. Presupuesto exacto, seguimiento en tiempo real e informe técnico al finalizar.',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
