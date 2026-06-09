@@ -7,7 +7,7 @@
     },
     {
       "path": "/api/cron/dispatch-campaigns",
-      "schedule": "0 * * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }

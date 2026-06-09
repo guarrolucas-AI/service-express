@@ -223,7 +223,7 @@ export async function dispatchScheduledCampaigns(): Promise<{ sent: number }> {
   const { whatsapp } = await import('@/lib/whatsapp')
 
   const now = new Date()
-  const windowEnd = new Date(now.getTime() + 60 * 60 * 1000) // próxima hora
+  const windowEnd = new Date(now.getTime() + 26 * 60 * 60 * 1000) // próximas 26h (cron diario 12:00 UTC)
 
   const pending = await prisma.whatsappCampaign.findMany({
     where: {
