@@ -1,0 +1,28 @@
+{
+  "name": "Express Service",
+  "short_name": "Express Service",
+  "description": "Taller mecánico — seguí tu auto en tiempo real",
+  "start_url": "/cliente",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#f59e0b",
+  "categories": ["automotive", "utilities"],
+  "icons": [
+    { "src": "/icons/192", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icons/512", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mis órdenes",
+      "url": "/cliente",
+      "description": "Ver el estado de tu vehículo"
+    },
+    {
+      "name": "Reservar turno",
+      "url": "/reservar",
+      "description": "Agendar un nuevo servicio"
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { PushSubscribeButton } from '@/components/PushSubscribeButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -117,6 +118,9 @@ export default async function MisOrdenesPage({
 
         {user && (
           <>
+            {/* ── Notificaciones push ──────────────────────────────────────── */}
+            <PushSubscribeButton phone={phone} />
+
             {/* ── KPI banner ─────────────────────────────────────────────── */}
             <div className="grid grid-cols-3 gap-3">
               {[
