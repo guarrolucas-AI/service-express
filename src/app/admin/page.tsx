@@ -4,6 +4,7 @@
 
 import { prisma } from '@/lib/db'
 import Link from 'next/link'
+import { AdminLogoutButton } from './AdminLogoutButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,17 +62,18 @@ export default async function AdminPage() {
           <p className="text-[10px] text-gray-500 uppercase tracking-widest">Express Service</p>
           <h1 className="font-display text-2xl font-bold text-brand leading-none">BACKOFFICE</h1>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <Link href="/mecanico"
             className="text-xs border border-steel-500 text-gray-300 rounded-lg px-3 py-2 hover:border-brand hover:text-brand transition-colors">
             Panel Mecánico →
           </Link>
           {workshop && (
-            <a href={`/api/pdf/monthly/${workshop.id}/2026-06`} target="_blank"
+            <a href={`/api/pdf/monthly/${workshop.id}/${new Date().toISOString().slice(0,7)}`} target="_blank"
               className="text-xs bg-brand text-black font-bold rounded-lg px-3 py-2">
               PDF Reporte Mensual
             </a>
           )}
+          <AdminLogoutButton />
         </div>
       </header>
 
