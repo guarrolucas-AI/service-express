@@ -5,6 +5,7 @@
 import { prisma } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { QuoteEditor } from './QuoteEditor'
 
 export const dynamic = 'force-dynamic'
 
@@ -110,6 +111,22 @@ export default async function AdminOrderPage({ params }: { params: { id: string 
               ) : null)}
             </div>
           </div>
+        )}
+
+        {/* ─── Quote Editor (solo cuando está PENDING_QUOTE) ─── */}
+        {wo.status === 'PENDING_QUOTE' && (
+          <QuoteEditor
+            workOrderId={wo.id}
+            initialItems={wo.orderItems.map(i => ({
+              id:         i.id,
+              taskName:   i.taskName,
+              taskType:   i.taskType,
+              laborPrice: Number(i.laborPrice ?? 0),
+              partPrice:  Number(i.partPrice  ?? 0),
+              quantity:   i.quantity,
+              estimatedMinutes: i.estimatedMinutes ?? null,
+            }))}
+          />
         )}
 
         {/* Tareas */}
