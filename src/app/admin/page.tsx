@@ -116,6 +116,14 @@ export default async function AdminPage({
           <h1 className="font-display text-2xl font-bold text-brand leading-none">BACKOFFICE</h1>
         </div>
         <div className="flex gap-2 items-center flex-wrap justify-end">
+          <Link href="/admin/analytics"
+            className="text-xs border border-steel-500 text-gray-300 rounded-lg px-3 py-2 hover:border-brand hover:text-brand transition-colors">
+            📊 Analytics
+          </Link>
+          <Link href="/admin/agenda"
+            className="text-xs border border-steel-500 text-gray-300 rounded-lg px-3 py-2 hover:border-brand hover:text-brand transition-colors">
+            📅 Agenda
+          </Link>
           <Link href="/admin/mecanicos"
             className="text-xs border border-steel-500 text-gray-300 rounded-lg px-3 py-2 hover:border-brand hover:text-brand transition-colors">
             👷 Mecánicos
