@@ -1,10 +1,9 @@
 /**
  * /mecanico/[id] — Detalle de orden (mecánico)
- * Cronómetro de tareas + checklist + cierre
  */
-
 import { prisma } from '@/lib/db'
 import { notFound } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { MecanicoOrderClient } from './client'
 
 export const dynamic = 'force-dynamic'
@@ -22,11 +21,9 @@ export default async function MecanicoOrderPage({ params }: { params: { id: stri
   })
   if (!wo) notFound()
 
-  // ID del mecánico autenticado (viene del env o cookie).
-  // La cookie solo dice "ok"; el ID real viene del env var MECHANIC_USER_ID.
-  const mechanicId = process.env.MECHANIC_USER_ID ?? 'demo-mechanic-id'
+  // ID del mecánico autenticado viene de la cookie (que ahora almacena el User.id real)
+  const mechanicId = cookies().get('mechanic-session')?.value ?? 'demo-mechanic-id'
 
-  // Serializar para pasar al cliente
   const data = {
     id:           wo.id,
     status:       wo.status,

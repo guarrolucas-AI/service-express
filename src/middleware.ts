@@ -25,7 +25,7 @@ export function middleware(req: NextRequest) {
     if (pathname === '/mecanico/login') return NextResponse.next()
 
     const session = req.cookies.get('mechanic-session')
-    if (session?.value !== 'ok') {
+    if (!session?.value) {
       const loginUrl = req.nextUrl.clone()
       loginUrl.pathname = '/mecanico/login'
       loginUrl.searchParams.set('from', pathname)

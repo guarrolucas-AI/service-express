@@ -6,6 +6,8 @@ import { prisma } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { QuoteEditor } from './QuoteEditor'
+import { StatusControls } from './StatusControls'
+import { AssignMechanic } from './AssignMechanic'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,17 +16,24 @@ function fmt(n: number) { return `$${Math.round(n).toLocaleString('es-AR')}` }
 const SEMA: Record<string, string> = { GREEN: '🟢', YELLOW: '🟡', RED: '🔴' }
 
 export default async function AdminOrderPage({ params }: { params: { id: string } }) {
-  const wo = await prisma.workOrder.findUnique({
-    where: { id: params.id },
-    include: {
-      user:       true,
-      vehicle:    true,
-      workshop:   true,
-      checklist:  true,
-      orderItems: { orderBy: { sortOrder: 'asc' } },
-      appointment: true,
-    },
-  })
+  const [wo, mechanics] = await Promise.all([
+    prisma.workOrder.findUnique({
+      where: { id: params.id },
+      include: {
+        user:       true,
+        vehicle:    true,
+        workshop:   true,
+        checklist:  true,
+        orderItems: { orderBy: { sortOrder: 'asc' } },
+        appointment: true,
+      },
+    }),
+    prisma.user.findMany({
+      where:   { role: 'MECHANIC', passwordHash: { not: null } },
+      select:  { id: true, firstName: true, lastName: true },
+      orderBy: { firstName: 'asc' },
+    }),
+  ])
   if (!wo) notFound()
 
   const totalLabor = wo.orderItems.reduce((s, i) => s + Number(i.laborPrice ?? 0) * i.quantity, 0)
@@ -110,6 +119,18 @@ export default async function AdminOrderPage({ params }: { params: { id: string 
                 </div>
               ) : null)}
             </div>
+          </div>
+        )}
+
+        {/* ─── Controles de estado + asignación ─── */}
+        {wo.status !== 'COMPLETED' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <StatusControls workOrderId={wo.id} currentStatus={wo.status} />
+            <AssignMechanic
+              workOrderId={wo.id}
+              mechanics={mechanics}
+              currentMechanicId={wo.assignedMechanicId ?? null}
+            />
           </div>
         )}
 
