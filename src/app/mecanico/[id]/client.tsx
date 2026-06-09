@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -131,6 +131,283 @@ function TaskItem({
             )}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Check-in modal ───────────────────────────────────────────────────────────
+
+interface PhotoSlot {
+  label: string
+  hint:  string
+  key:   'front' | 'rear' | 'odometer'
+}
+
+const PHOTO_SLOTS: PhotoSlot[] = [
+  { key: 'front',    label: 'Foto delantera',  hint: 'Capture el frente del vehículo' },
+  { key: 'rear',     label: 'Foto trasera',    hint: 'Capture la parte trasera' },
+  { key: 'odometer', label: 'Foto odómetro',   hint: 'Capture el tablero con el km' },
+]
+
+async function uploadPhoto(file: File): Promise<string> {
+  const fd = new FormData()
+  fd.append('file', file)
+  const res = await fetch('/api/upload/photo', { method: 'POST', body: fd })
+  if (!res.ok) {
+    const data = await res.json()
+    throw new Error(data.error ?? 'Error al subir foto')
+  }
+  const { url } = await res.json()
+  return url as string
+}
+
+function PhotoCapture({
+  slot,
+  preview,
+  onCapture,
+}: {
+  slot:      PhotoSlot
+  preview:   string | null
+  onCapture: (file: File) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) onCapture(file)
+  }
+
+  return (
+    <div>
+      <p className="text-gray-400 text-xs uppercase tracking-wider mb-2">{slot.label}</p>
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        className={`relative w-full h-40 rounded-xl overflow-hidden border-2 transition-all active:scale-95
+          ${preview ? 'border-green-500' : 'border-dashed border-steel-500 bg-steel-700'}`}
+      >
+        {preview ? (
+          <>
+            <img src={preview} alt="" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+              <span className="text-white text-sm font-bold">Cambiar foto</span>
+            </div>
+            <div className="absolute top-2 right-2 bg-green-500 rounded-full w-6 h-6 flex items-center justify-center">
+              <span className="text-black text-xs font-bold">✓</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full gap-2">
+            <span className="text-3xl">📷</span>
+            <span className="text-gray-400 text-sm">{slot.hint}</span>
+            <span className="text-gray-600 text-xs">Toque para capturar</span>
+          </div>
+        )}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleChange}
+        className="hidden"
+      />
+    </div>
+  )
+}
+
+function CheckInModal({
+  workOrderId,
+  onClose,
+  onDone,
+}: {
+  workOrderId: string
+  onClose: () => void
+  onDone:  () => void
+}) {
+  const [previews,  setPreviews]  = useState<Record<string, string>>({})
+  const [files,     setFiles]     = useState<Record<string, File>>({})
+  const [km,        setKm]        = useState<string>('')
+  const [step,      setStep]      = useState<'photos' | 'km' | 'uploading' | 'done'>('photos')
+  const [progress,  setProgress]  = useState(0)
+  const [error,     setError]     = useState<string | null>(null)
+
+  const capturePhoto = (key: string, file: File) => {
+    const url = URL.createObjectURL(file)
+    setPreviews(p => ({ ...p, [key]: url }))
+    setFiles(f => ({ ...f, [key]: file }))
+  }
+
+  const photosReady = PHOTO_SLOTS.every(s => !!files[s.key])
+
+  const handleSubmit = async () => {
+    if (!photosReady || !km || Number(km) <= 0) return
+    setStep('uploading')
+    setError(null)
+    try {
+      // 1. Upload 3 fotos en paralelo con feedback de progreso
+      setProgress(10)
+      const [frontUrl, rearUrl, odometerUrl] = await Promise.all([
+        uploadPhoto(files['front']!),
+        uploadPhoto(files['rear']!),
+        uploadPhoto(files['odometer']!),
+      ])
+      setProgress(70)
+
+      // 2. Check-in
+      const res = await fetch('/api/work-order/check-in', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          workOrderId,
+          currentKm:       Number(km),
+          photoFrontUrl:    frontUrl,
+          photoRearUrl:     rearUrl,
+          photoOdometerUrl: odometerUrl,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error ?? 'Error en check-in')
+      }
+      setProgress(100)
+      setStep('done')
+      setTimeout(onDone, 800)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error')
+      setStep('photos')
+    }
+  }
+
+  // Pantalla de éxito / carga
+  if (step === 'uploading' || step === 'done') {
+    return (
+      <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
+        <div className="text-center">
+          {step === 'done' ? (
+            <>
+              <div className="text-6xl mb-4">✅</div>
+              <p className="text-white font-display font-bold text-2xl">¡Check-in completado!</p>
+            </>
+          ) : (
+            <>
+              <div className="text-5xl mb-6 animate-spin">⏳</div>
+              <p className="text-white font-bold text-lg mb-4">Subiendo fotos...</p>
+              <div className="w-64 bg-steel-700 rounded-full h-2 mx-auto">
+                <div
+                  className="bg-brand h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <p className="text-gray-500 text-sm mt-2">{progress}%</p>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/85 z-50 flex items-end">
+      <div className="bg-steel-800 w-full max-h-[95vh] overflow-y-auto rounded-t-2xl">
+        {/* Header */}
+        <div className="sticky top-0 bg-steel-800 border-b border-steel-600 flex items-center justify-between px-4 py-3 z-10">
+          <div>
+            <h2 className="font-display font-bold text-xl text-white">Check-in del Vehículo</h2>
+            <p className="text-gray-500 text-xs">
+              {step === 'photos' ? 'Tomá las 3 fotos requeridas' : 'Ingresá el kilometraje'}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 text-3xl leading-none w-10 h-10 flex items-center justify-center">
+            ×
+          </button>
+        </div>
+
+        <div className="p-4 space-y-5">
+          {step === 'photos' && (
+            <>
+              <div className="bg-brand/10 border border-brand/30 rounded-lg p-3 text-center">
+                <p className="text-brand text-xs font-bold uppercase tracking-wider">
+                  {Object.keys(files).length} / 3 fotos capturadas
+                </p>
+              </div>
+
+              {PHOTO_SLOTS.map(slot => (
+                <PhotoCapture
+                  key={slot.key}
+                  slot={slot}
+                  preview={previews[slot.key] ?? null}
+                  onCapture={file => capturePhoto(slot.key, file)}
+                />
+              ))}
+
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => setStep('km')}
+                disabled={!photosReady}
+                className="w-full bg-brand text-black font-display font-bold text-lg py-4 rounded-xl disabled:opacity-40 active:scale-95 transition-transform"
+              >
+                CONTINUAR →
+              </button>
+            </>
+          )}
+
+          {step === 'km' && (
+            <>
+              <button
+                onClick={() => setStep('photos')}
+                className="flex items-center gap-1 text-gray-400 text-sm mb-1"
+              >
+                ← Volver a las fotos
+              </button>
+
+              {/* Resumen de fotos */}
+              <div className="flex gap-2">
+                {PHOTO_SLOTS.map(slot => (
+                  <div key={slot.key} className="flex-1 h-20 rounded-lg overflow-hidden">
+                    <img src={previews[slot.key]} alt="" className="w-full h-full object-cover" />
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-steel-700 rounded-xl p-4">
+                <label className="text-brand text-xs font-bold uppercase tracking-wider block mb-3">
+                  Kilometraje al ingreso
+                </label>
+                <input
+                  type="number"
+                  value={km}
+                  onChange={e => setKm(e.target.value)}
+                  placeholder="Ej: 85000"
+                  min={1}
+                  autoFocus
+                  className="w-full bg-steel-600 text-white text-3xl font-display font-bold text-center rounded-xl py-4 border border-steel-500 focus:outline-none focus:border-brand"
+                />
+                <p className="text-gray-600 text-xs text-center mt-2">km</p>
+              </div>
+
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
+                  <p className="text-red-400 text-sm">{error}</p>
+                </div>
+              )}
+
+              <button
+                onClick={handleSubmit}
+                disabled={!km || Number(km) <= 0}
+                className="w-full bg-green-500 text-black font-display font-bold text-lg py-4 rounded-xl disabled:opacity-40 active:scale-95 transition-transform"
+              >
+                ✅ CONFIRMAR CHECK-IN
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -298,15 +575,17 @@ const MECHANIC_ID = 'demo-mechanic-id'  // En producción vendrá del token de s
 
 export function MecanicoOrderClient({ data }: { data: OrderData }) {
   const router = useRouter()
-  const [loading, setLoading]           = useState<string | null>(null)
-  const [showChecklist, setShowChecklist] = useState(false)
+  const [loading, setLoading]             = useState<string | null>(null)
+  const [showChecklist, setShowChecklist]   = useState(false)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
-  const [closing, setClosing]           = useState(false)
-  const [error, setError]               = useState<string | null>(null)
+  const [showCheckIn, setShowCheckIn]      = useState(false)
+  const [closing, setClosing]             = useState(false)
+  const [error, setError]                 = useState<string | null>(null)
 
-  const laborItems = data.items.filter(i => i.taskType === 'LABOR')
-  const allDone    = laborItems.every(i => i.status === 'COMPLETED' || i.status === 'SKIPPED')
-  const inQC       = data.status === 'QUALITY_CONTROL'
+  const laborItems  = data.items.filter(i => i.taskType === 'LABOR')
+  const allDone     = laborItems.every(i => i.status === 'COMPLETED' || i.status === 'SKIPPED')
+  const inQC        = data.status === 'QUALITY_CONTROL'
+  const needsCheckIn = data.status === 'READY_FOR_APPOINTMENT'
 
   const handleStart = useCallback(async (itemId: string) => {
     setLoading(itemId)
@@ -381,13 +660,28 @@ export function MecanicoOrderClient({ data }: { data: OrderData }) {
         </div>
       </header>
 
+      {/* Banner de check-in pendiente */}
+      {needsCheckIn && (
+        <div className="mx-4 mt-4 bg-brand/10 border border-brand/40 rounded-xl p-4">
+          <p className="text-brand font-bold text-sm mb-1">📋 Check-in pendiente</p>
+          <p className="text-gray-400 text-xs">El vehículo llegó al taller. Tomá las fotos y registrá el km para iniciar la recepción.</p>
+        </div>
+      )}
+
       {/* Fotos check-in */}
       {(data.checkInPhotoFront || data.checkInPhotoRear || data.checkInPhotoOdometer) && (
         <div className="flex gap-2 px-4 pt-4 overflow-x-auto pb-1">
-          {[data.checkInPhotoFront, data.checkInPhotoRear, data.checkInPhotoOdometer].map((url, i) =>
-            url ? (
-              <div key={i} className="shrink-0 w-28 h-20 rounded-lg overflow-hidden bg-steel-700">
-                <img src={url} alt="" className="w-full h-full object-cover" />
+          {[
+            { url: data.checkInPhotoFront,    label: 'Delantera' },
+            { url: data.checkInPhotoRear,     label: 'Trasera' },
+            { url: data.checkInPhotoOdometer, label: 'Odómetro' },
+          ].map((p, i) =>
+            p.url ? (
+              <div key={i} className="shrink-0 text-center">
+                <div className="w-28 h-20 rounded-lg overflow-hidden bg-steel-700 mb-1">
+                  <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
+                </div>
+                <p className="text-gray-600 text-[10px]">{p.label}</p>
               </div>
             ) : null
           )}
@@ -397,9 +691,9 @@ export function MecanicoOrderClient({ data }: { data: OrderData }) {
       {/* Info del vehículo */}
       <div className="grid grid-cols-3 gap-2 px-4 mt-4">
         {[
-          { label: 'Kilometraje', value: `${(data.checkInKm ?? 0).toLocaleString('es-AR')} km` },
+          { label: 'Kilometraje', value: data.checkInKm ? `${data.checkInKm.toLocaleString('es-AR')} km` : '—' },
           { label: 'Total OT',    value: `$${data.totalAmount.toLocaleString('es-AR')}` },
-          { label: 'Estado',      value: data.status.replace('_', ' ') },
+          { label: 'Estado',      value: data.status.replace(/_/g, ' ') },
         ].map(info => (
           <div key={info.label} className="bg-steel-800 border border-steel-600 rounded-lg p-3 text-center">
             <p className="text-gray-500 text-[10px] uppercase tracking-wide">{info.label}</p>
@@ -409,15 +703,17 @@ export function MecanicoOrderClient({ data }: { data: OrderData }) {
       </div>
 
       {/* Tareas */}
-      <div className="px-4 mt-4">
-        <p className="text-brand text-xs font-bold uppercase tracking-wider mb-3">Tareas de mano de obra</p>
-        <div className="space-y-3">
-          {data.items.map(item => (
-            <TaskItem key={item.id} item={item}
-              onStart={handleStart} onStop={handleStop} loading={loading} />
-          ))}
+      {!needsCheckIn && (
+        <div className="px-4 mt-4">
+          <p className="text-brand text-xs font-bold uppercase tracking-wider mb-3">Tareas de mano de obra</p>
+          <div className="space-y-3">
+            {data.items.map(item => (
+              <TaskItem key={item.id} item={item}
+                onStart={handleStart} onStop={handleStop} loading={loading} />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {error && (
         <div className="mx-4 mt-4 bg-red-500/10 border border-red-500/30 rounded-lg p-3">
@@ -425,28 +721,52 @@ export function MecanicoOrderClient({ data }: { data: OrderData }) {
         </div>
       )}
 
-      {/* Acciones de cierre */}
+      {/* Acciones — fixed bottom */}
       <div className="fixed bottom-0 left-0 right-0 bg-steel-800 border-t border-steel-600 p-4 space-y-2">
+        {/* CHECK-IN */}
+        {needsCheckIn && (
+          <button
+            onClick={() => setShowCheckIn(true)}
+            className="w-full bg-brand text-black font-display font-bold text-lg py-3.5 rounded-xl active:scale-95 transition-transform"
+          >
+            📷 INICIAR CHECK-IN
+          </button>
+        )}
+
+        {/* CHECKLIST */}
         {inQC && !data.hasChecklist && (
           <button onClick={() => setShowChecklist(true)}
             className="w-full bg-brand text-black font-display font-bold text-lg py-3.5 rounded-xl active:scale-95 transition-transform">
             📋 COMPLETAR CHECKLIST
           </button>
         )}
+
+        {/* CERRAR */}
         {inQC && data.hasChecklist && (
           <button onClick={() => setShowCloseConfirm(true)}
             className="w-full bg-green-500 text-black font-display font-bold text-lg py-3.5 rounded-xl active:scale-95 transition-transform">
             ✅ CERRAR Y GENERAR INFORME
           </button>
         )}
-        {!inQC && (
+
+        {/* Estado neutro — en progreso */}
+        {!needsCheckIn && !inQC && (
           <p className="text-center text-gray-600 text-sm py-2">
-            {allDone ? 'En espera de control de calidad...' : 'Completá todas las tareas para avanzar'}
+            {allDone ? 'Todas las tareas completadas — esperando cierre...' : 'Completá las tareas para avanzar'}
           </p>
         )}
       </div>
 
-      {/* Modal checklist */}
+      {/* ── Modales ── */}
+
+      {showCheckIn && (
+        <CheckInModal
+          workOrderId={data.id}
+          onClose={() => setShowCheckIn(false)}
+          onDone={() => { setShowCheckIn(false); router.refresh() }}
+        />
+      )}
+
       {showChecklist && (
         <ChecklistModal
           workOrderId={data.id}
@@ -455,7 +775,6 @@ export function MecanicoOrderClient({ data }: { data: OrderData }) {
         />
       )}
 
-      {/* Modal confirmación cierre */}
       {showCloseConfirm && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-6">
           <div className="bg-steel-800 border border-steel-600 rounded-2xl p-6 w-full max-w-sm">
