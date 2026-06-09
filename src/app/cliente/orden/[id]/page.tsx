@@ -6,7 +6,7 @@
 import { prisma } from '@/lib/db'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { NpsForm } from './nps-form'
 
@@ -49,6 +49,15 @@ export default async function ClienteOrdenPage({
     },
   })
   if (!wo) notFound()
+
+  // Mantenimiento predictivo (solo si está completada y hay registros)
+  const predictive = wo.status === 'COMPLETED'
+    ? await prisma.predictiveMaintenance.findMany({
+        where: { vehicleId: wo.vehicleId, resolved: false },
+        orderBy: { projectedCriticalDate: 'asc' },
+        take: 6,
+      })
+    : []
 
   const currentStep = STATUS_INDEX[wo.status] ?? 0
   const isCompleted = wo.status === 'COMPLETED'
@@ -268,6 +277,58 @@ export default async function ClienteOrdenPage({
               </p>
               {wo.npsComment && <p className="text-gray-400 text-sm mt-1">"{wo.npsComment}"</p>}
             </div>
+          </div>
+        )}
+
+        {/* Mantenimiento predictivo */}
+        {predictive.length > 0 && (
+          <div className="bg-steel-800 border border-steel-600 rounded-2xl p-5">
+            <p className="text-brand text-xs font-bold uppercase tracking-wider mb-1">Próximos mantenimientos</p>
+            <p className="text-gray-500 text-xs mb-4">
+              Proyección basada en la inspección y tu promedio de km mensual
+            </p>
+            <div className="space-y-3">
+              {predictive.map((rec) => {
+                const LABELS: Record<string, string> = {
+                  BRAKE_PAD_FRONT: '🔴 Pastillas de freno delanteras',
+                  BRAKE_PAD_REAR:  '🔴 Pastillas de freno traseras',
+                  TIRE_FRONT_LEFT: '🟡 Neumático delantero izquierdo',
+                  TIRE_FRONT_RIGHT:'🟡 Neumático delantero derecho',
+                  TIRE_REAR_LEFT:  '🟡 Neumático trasero izquierdo',
+                  TIRE_REAR_RIGHT: '🟡 Neumático trasero derecho',
+                }
+                const label = LABELS[rec.component] ?? rec.component
+                const daysUntil = Math.max(
+                  0,
+                  Math.round((rec.projectedCriticalDate.getTime() - Date.now()) / 86_400_000)
+                )
+                const urgency = daysUntil < 30 ? 'border-red-500/40 bg-red-500/5'
+                  : daysUntil < 90 ? 'border-yellow-500/40 bg-yellow-500/5'
+                  : 'border-steel-600 bg-steel-700/40'
+                const dateStr = format(rec.projectedCriticalDate, "MMMM yyyy", { locale: es })
+
+                return (
+                  <div key={rec.id} className={`rounded-xl border p-3 flex items-center justify-between gap-3 ${urgency}`}>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium leading-tight">{label}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">
+                        A los {rec.projectedCriticalKm.toLocaleString('es-AR')} km · {dateStr}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className={`font-display font-bold text-sm ${
+                        daysUntil < 30 ? 'text-red-400' : daysUntil < 90 ? 'text-yellow-400' : 'text-green-400'
+                      }`}>
+                        {daysUntil < 1 ? 'Urgente' : `~${daysUntil} días`}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-gray-700 text-xs mt-4 text-center">
+              Te avisaremos con anticipación cuando se acerque la fecha
+            </p>
           </div>
         )}
 
