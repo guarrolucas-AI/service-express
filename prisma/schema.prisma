@@ -39,6 +39,7 @@ enum WorkOrderStatus {
   IN_PROGRESS          // Mecánico trabajando
   QUALITY_CONTROL      // Último item completado, checklist en curso
   COMPLETED            // Orden cerrada
+  CANCELLED            // Orden cancelada por admin o cliente
 }
 
 enum TaskStatus {
