@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/update-estimates",
       "schedule": "0 3 1 * *"
+    },
+    {
+      "path": "/api/cron/dispatch-campaigns",
+      "schedule": "0 * * * *"
     }
   ]
 }

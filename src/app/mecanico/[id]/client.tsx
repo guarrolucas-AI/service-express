@@ -571,9 +571,7 @@ function ChecklistModal({ workOrderId, onClose, onSaved }: {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-const MECHANIC_ID = 'demo-mechanic-id'  // En producción vendrá del token de sesión
-
-export function MecanicoOrderClient({ data }: { data: OrderData }) {
+export function MecanicoOrderClient({ data, mechanicId }: { data: OrderData; mechanicId: string }) {
   const router = useRouter()
   const [loading, setLoading]             = useState<string | null>(null)
   const [showChecklist, setShowChecklist]   = useState(false)
@@ -594,7 +592,7 @@ export function MecanicoOrderClient({ data }: { data: OrderData }) {
       const res = await fetch('/api/work-order/task/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderItemId: itemId, mechanicUserId: MECHANIC_ID }),
+        body: JSON.stringify({ orderItemId: itemId, mechanicUserId: mechanicId }),
       })
       if (!res.ok) throw new Error((await res.json()).error)
       router.refresh()

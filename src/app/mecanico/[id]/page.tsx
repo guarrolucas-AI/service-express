@@ -5,7 +5,6 @@
 
 import { prisma } from '@/lib/db'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import { MecanicoOrderClient } from './client'
 
 export const dynamic = 'force-dynamic'
@@ -22,6 +21,10 @@ export default async function MecanicoOrderPage({ params }: { params: { id: stri
     },
   })
   if (!wo) notFound()
+
+  // ID del mecánico autenticado (viene del env o cookie).
+  // La cookie solo dice "ok"; el ID real viene del env var MECHANIC_USER_ID.
+  const mechanicId = process.env.MECHANIC_USER_ID ?? 'demo-mechanic-id'
 
   // Serializar para pasar al cliente
   const data = {
@@ -56,5 +59,5 @@ export default async function MecanicoOrderPage({ params }: { params: { id: stri
     totalAmount:  Number(wo.totalAmount ?? 0),
   }
 
-  return <MecanicoOrderClient data={data} />
+  return <MecanicoOrderClient data={data} mechanicId={mechanicId} />
 }

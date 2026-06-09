@@ -5,20 +5,21 @@
 
 import { prisma } from '@/lib/db'
 import Link from 'next/link'
+import { LogoutButton } from './LogoutButton'
 
 export const dynamic = 'force-dynamic'
 
 const STATUS_LABEL: Record<string, string> = {
-  VEHICLE_RECEIVED: 'Recibido',
-  IN_PROGRESS:      'En progreso',
-  QUALITY_CONTROL:  'Control calidad',
-  READY_FOR_APPOINTMENT: 'Esperando',
+  VEHICLE_RECEIVED:       'Recibido',
+  IN_PROGRESS:            'En progreso',
+  QUALITY_CONTROL:        'Control calidad',
+  READY_FOR_APPOINTMENT:  'Esperando',
 }
 const STATUS_COLOR: Record<string, string> = {
-  VEHICLE_RECEIVED: 'badge-pending',
-  IN_PROGRESS:      'badge-progress',
-  QUALITY_CONTROL:  'badge-quality',
-  READY_FOR_APPOINTMENT: 'bg-steel-600 text-gray-300 border border-steel-400',
+  VEHICLE_RECEIVED:       'badge-pending',
+  IN_PROGRESS:            'badge-progress',
+  QUALITY_CONTROL:        'badge-quality',
+  READY_FOR_APPOINTMENT:  'bg-steel-600 text-gray-300 border border-steel-400',
 }
 
 export default async function MecanicoPage() {
@@ -45,9 +46,12 @@ export default async function MecanicoPage() {
           <p className="text-[10px] text-gray-500 uppercase tracking-widest">Express Service</p>
           <h1 className="font-display text-xl font-bold text-brand leading-none">PANEL MECÁNICO</h1>
         </div>
-        <div className="text-right">
-          <p className="text-[11px] text-gray-400 capitalize">{dateLabel}</p>
-          <p className="text-brand font-bold text-sm">{orders.length} activas</p>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-[11px] text-gray-400 capitalize">{dateLabel}</p>
+            <p className="text-brand font-bold text-sm">{orders.length} activas</p>
+          </div>
+          <LogoutButton />
         </div>
       </header>
 
@@ -125,7 +129,7 @@ export default async function MecanicoPage() {
       {/* Nav bottom */}
       <nav className="fixed bottom-0 left-0 right-0 bg-steel-800 border-t border-steel-600 flex">
         <Link href="/mecanico" className="flex-1 py-3 text-center text-brand text-xs font-bold">
-          📋 Órdenes
+          📋 Mis órdenes
         </Link>
         <Link href="/admin" className="flex-1 py-3 text-center text-gray-500 text-xs">
           ⚙️ Admin
