@@ -128,6 +128,10 @@ export default async function AdminPage({
             className="text-xs border border-steel-500 text-gray-300 rounded-lg px-3 py-2 hover:border-brand hover:text-brand transition-colors">
             👷 Mecánicos
           </Link>
+          <Link href="/admin/config"
+            className="text-xs border border-steel-500 text-gray-300 rounded-lg px-3 py-2 hover:border-brand hover:text-brand transition-colors">
+            ⚙️ Config
+          </Link>
           <Link href="/mecanico"
             className="text-xs border border-steel-500 text-gray-300 rounded-lg px-3 py-2 hover:border-brand hover:text-brand transition-colors">
             Panel Mecánico →
